@@ -24,6 +24,8 @@ if (!BOT_TOKEN) {
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
+console.log("PAJ Rate bot starting...");
+
 // Register commands with Telegram
 bot.setMyCommands([
   { command: "rate", description: "Get current PAJ Cash rate" },
@@ -36,7 +38,6 @@ bot.setMyCommands([
 ]);
 
 console.log("Bot commands registered!");
-console.log("PAJ Rate bot starting...");
 
 const refreshKeyboard = {
   inline_keyboard: [[{ text: "🔄 Refresh", callback_data: "refresh_rate" }]],
@@ -485,85 +486,6 @@ console.log("Alert checker running every 2 minutes");
 // ============================================
 // Health check server
 // ============================================
-const app = express();
-app.get("/", (_req, res) => res.send("PAJ rate bot is running."));
-app.listen(PORT, () => console.log(`Health check server on port ${PORT}`));    await sendRate(msg.chat.id);
-  } catch (err) {
-    console.error("Error handling /rate:", err.message);
-    await bot.sendMessage(
-      msg.chat.id,
-      "⚠️ Couldn't fetch the live rate right now. Try again in a bit."
-    );
-  }
-});
-
-bot.on("callback_query", async (query) => {
-  if (query.data !== "refresh_rate") return;
-
-  try {
-    const rateData = await getRate();
-    await bot.editMessageText(formatRateMessage(rateData), {
-      chat_id: query.message.chat.id,
-      message_id: query.message.message_id,
-      parse_mode: "HTML",
-      reply_markup: refreshKeyboard,
-    });
-    await bot.answerCallbackQuery(query.id, { text: "Updated ✅" });
-  } catch (err) {
-    if (err.message && err.message.includes("message is not modified")) {
-      await bot.answerCallbackQuery(query.id, { text: "Still the same rate" });
-      return;
-    }
-    console.error("Refresh failed:", err.message);
-    await bot.answerCallbackQuery(query.id, {
-      text: "Couldn't refresh, try again",
-      show_alert: true,
-    });
-  }
-});
-
-bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(
-    msg.chat.id,
-    "Hey 👋 welcome to PajRate!\n\n" +
-      "I'll get you PAJ's live rate whenever you need it — no logging in.\n\n" +
-      "Just send /rate and I'll show you the current buy and sell price, plus whether it's moved since you last checked. There's a refresh button too.\n\n" +
-      "That's really it — give /rate a try 👇",
-    { parse_mode: "HTML" }
-  );
-});
-
-bot.onText(/\/help/, (msg) => {
-  bot.sendMessage(
-    msg.chat.id,
-    "<b>Commands</b>\n" +
-      "/rate — get the current PAJ Cash rate\n" +
-      "/start — intro message\n" +
-      "/help — this list",
-    { parse_mode: "HTML" }
-  );
-});
-
-bot.on("polling_error", (err) => {
-  console.error("Polling error:", err.message);
-});
-
-if (CHANNEL_ID) {
-  cron.schedule(CRON_SCHEDULE, async () => {
-    try {
-      await sendRate(CHANNEL_ID);
-      console.log(`[${new Date().toISOString()}] Posted rate to channel.`);
-    } catch (err) {
-      console.error("Scheduled broadcast failed:", err.message);
-    }
-  });
-  console.log(`Scheduled broadcasts to ${CHANNEL_ID} on "${CRON_SCHEDULE}"`);
-} else {
-  console.warn(
-    "TELEGRAM_CHANNEL_ID not set — skipping scheduled broadcasts, /rate command still works."
-  );
-}
-
 const app = express();
 app.get("/", (_req, res) => res.send("PAJ rate bot is running."));
 app.listen(PORT, () => console.log(`Health check server on port ${PORT}`));
