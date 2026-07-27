@@ -24,6 +24,18 @@ if (!BOT_TOKEN) {
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
+// Register commands with Telegram
+bot.setMyCommands([
+  { command: "rate", description: "Get current PAJ Cash rate" },
+  { command: "convert", description: "Convert NGN ↔ USDC amounts" },
+  { command: "alert", description: "Set a price alert" },
+  { command: "alerts", description: "View your active alerts" },
+  { command: "removealert", description: "Remove an alert" },
+  { command: "start", description: "Welcome message" },
+  { command: "help", description: "List all commands" },
+]);
+
+console.log("Bot commands registered!");
 console.log("PAJ Rate bot starting...");
 
 const refreshKeyboard = {
