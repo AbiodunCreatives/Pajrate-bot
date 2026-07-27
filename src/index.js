@@ -40,10 +40,11 @@ bot.onText(/\/rate/, async (msg) => {
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "👋 Send /rate anytime for the current PAJ Cash rate. " +
-      (CHANNEL_ID
-        ? "It's also auto-posted to the channel every few minutes."
-        : "")
+    "Welcome to PajRate!\n\n" +
+      "I'll get you PAJ's live rate whenever you need it — no logging in.\n\n" +
+      "Just send /rate and I'll show you the current buy and sell price, plus whether it's moved since you last checked.\n\n" +
+      "That's really it — give /rate a try 👇",
+    { parse_mode: "HTML" }
   );
 });
 
