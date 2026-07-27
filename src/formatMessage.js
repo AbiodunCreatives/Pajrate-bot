@@ -14,6 +14,8 @@ function formatRateMessage({ onRamp, offRamp, fetchedAt }) {
   lastOnRamp = onRamp.rate;
   lastOffRamp = offRamp.rate;
 
+  const spread = Math.abs(onRamp.rate - offRamp.rate);
+
   const time = fetchedAt.toLocaleTimeString("en-NG", {
     hour: "2-digit",
     minute: "2-digit",
@@ -21,10 +23,13 @@ function formatRateMessage({ onRamp, offRamp, fetchedAt }) {
   });
 
   return (
-    `💱 *PAJ Cash Live Rate*\n\n` +
-    `📥 Buy (onramp) — ${onRamp.pair}: *${onRamp.rate.toLocaleString("en-NG")}*${onTrend}\n` +
-    `📤 Sell (offramp) — ${offRamp.pair}: *${offRamp.rate.toLocaleString("en-NG")}*${offTrend}\n\n` +
-    `🕒 ${time} (WAT)`
+    `✨ <b>PAJ Cash Rate</b>\n` +
+    `<i>${onRamp.pair}</i>\n` +
+    `━━━━━━━━━━━━━━━━━━\n\n` +
+    `📥 <b>Buy</b>&#8194;&#8194;<code>${onRamp.rate.toLocaleString("en-NG")}</code>${onTrend}\n` +
+    `📤 <b>Sell</b>&#8194;&#8194;<code>${offRamp.rate.toLocaleString("en-NG")}</code>${offTrend}\n\n` +
+    `💰 Spread&#8194;<code>${spread.toLocaleString("en-NG")}</code>\n\n` +
+    `🕒 ${time} WAT`
   );
 }
 
