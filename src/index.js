@@ -7,8 +7,8 @@ const { getRate } = require("./rateSource");
 const { formatRateMessage } = require("./formatMessage");
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID; // e.g. @your_channel or -100xxxxxxxxxx
-const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "*/10 * * * *"; // every 10 min
+const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "*/10 * * * *";
 const PORT = process.env.PORT || 8080;
 
 if (!BOT_TOKEN) {
@@ -20,30 +20,73 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 console.log("PAJ Rate bot starting...");
 
-// ---- On-demand /rate command ----
+const refreshKeyboard = {
+  inline_keyboard: [[{ text: "🔄 Refresh", callback_data: "refresh_rate" }]],
+};
+
+async function sendRate(chatId) {
+  const rateData = await getRate();
+  return bot.sendMessage(chatId, formatRateMessage(rateData), {
+    parse_mode: "HTML",
+    reply_markup: refreshKeyboard,
+  });
+}
+
 bot.onText(/\/rate/, async (msg) => {
-  const chatId = msg.chat.id;
   try {
-    const rateData = await getRate();
-    await bot.sendMessage(chatId, formatRateMessage(rateData), {
-      parse_mode: "Markdown",
-    });
+    await sendRate(msg.chat.id);
   } catch (err) {
     console.error("Error handling /rate:", err.message);
     await bot.sendMessage(
-      chatId,
+      msg.chat.id,
       "⚠️ Couldn't fetch the live rate right now. Try again in a bit."
     );
+  }
+});
+
+bot.on("callback_query", async (query) => {
+  if (query.data !== "refresh_rate") return;
+
+  try {
+    const rateData = await getRate();
+    await bot.editMessageText(formatRateMessage(rateData), {
+      chat_id: query.message.chat.id,
+      message_id: query.message.message_id,
+      parse_mode: "HTML",
+      reply_markup: refreshKeyboard,
+    });
+    await bot.answerCallbackQuery(query.id, { text: "Updated ✅" });
+  } catch (err) {
+    if (err.message && err.message.includes("message is not modified")) {
+      await bot.answerCallbackQuery(query.id, { text: "Still the same rate" });
+      return;
+    }
+    console.error("Refresh failed:", err.message);
+    await bot.answerCallbackQuery(query.id, {
+      text: "Couldn't refresh, try again",
+      show_alert: true,
+    });
   }
 });
 
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "👋 Send /rate anytime for the current PAJ Cash rate. " +
-      (CHANNEL_ID
-        ? "It's also auto-posted to the channel every few minutes."
-        : "")
+    "👋 <b>Welcome to PajRate</b>\n\n" +
+      "Send /rate anytime for PAJ Cash's current live rate — buy, sell, and how it's moved.\n\n" +
+      (CHANNEL_ID ? "It's also auto-posted here every few minutes." : ""),
+    { parse_mode: "HTML" }
+  );
+});
+
+bot.onText(/\/help/, (msg) => {
+  bot.sendMessage(
+    msg.chat.id,
+    "<b>Commands</b>\n" +
+      "/rate — get the current PAJ Cash rate\n" +
+      "/start — intro message\n" +
+      "/help — this list",
+    { parse_mode: "HTML" }
   );
 });
 
@@ -51,14 +94,10 @@ bot.on("polling_error", (err) => {
   console.error("Polling error:", err.message);
 });
 
-// ---- Scheduled channel broadcast ----
 if (CHANNEL_ID) {
   cron.schedule(CRON_SCHEDULE, async () => {
     try {
-      const rateData = await getRate();
-      await bot.sendMessage(CHANNEL_ID, formatRateMessage(rateData), {
-        parse_mode: "Markdown",
-      });
+      await sendRate(CHANNEL_ID);
       console.log(`[${new Date().toISOString()}] Posted rate to channel.`);
     } catch (err) {
       console.error("Scheduled broadcast failed:", err.message);
@@ -71,7 +110,6 @@ if (CHANNEL_ID) {
   );
 }
 
-// ---- Tiny HTTP server so Fly.io health checks pass ----
 const app = express();
 app.get("/", (_req, res) => res.send("PAJ rate bot is running."));
 app.listen(PORT, () => console.log(`Health check server on port ${PORT}`));
