@@ -72,9 +72,10 @@ bot.on("callback_query", async (query) => {
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "👋 <b>Welcome to PajRate</b>\n\n" +
-      "Send /rate anytime for PAJ Cash's current live rate — buy, sell, and how it's moved.\n\n" +
-      (CHANNEL_ID ? "It's also auto-posted here every few minutes." : ""),
+    "Hey 👋 welcome to PajRate!\n\n" +
+      "I'll get you PAJ's live rate whenever you need it — no logging in.\n\n" +
+      "Just send /rate and I'll show you the current buy and sell price, plus whether it's moved since you last checked. There's a refresh button too.\n\n" +
+      "That's really it — give /rate a try 👇",
     { parse_mode: "HTML" }
   );
 });
