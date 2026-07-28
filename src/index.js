@@ -42,12 +42,9 @@ bot.onText(/\/rate/, async (msg) => {
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(
     msg.chat.id,
-    "<b>PajRate</b> — live PAJ rates, no login.\n\n" +
-      "/rate — buy &amp; sell price\n" +
-      "/convert &lt;amount&gt; [unit] — ₦ ⇄ $ \n" +
-      "/alert above|below &lt;price&gt; — get pinged at your target\n" +
-      "/alerts · /removealert &lt;id&gt;\n\n" +
-      "Try /rate 👇",
+    "💱 Live PAJ rates\n\n" +
+      "/rate for buy/sell Price\n" +
+      "/convert &lt;amount&gt; for ₦ ⇄ $",
     { parse_mode: "HTML" }
   );
 });
