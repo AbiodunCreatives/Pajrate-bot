@@ -21,3 +21,11 @@ primary_region = 'ams'
 [[vm]]
   size = 'shared-cpu-1x'
   memory = '256mb'
+
+# Price alerts are stored in a local JSON file (./data/alerts.json) which
+# lives on the machine's local disk and is wiped on redeploy. To keep
+# alerts across deploys, create a volume and mount it:
+#   fly volumes create pajrate_data --size 1 --region ams
+# [[mounts]]
+#   source = "pajrate_data"
+#   destination = "/app/data"
