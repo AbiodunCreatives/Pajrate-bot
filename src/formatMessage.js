@@ -21,7 +21,7 @@ function formatRateMessage({ onRamp, offRamp, fetchedAt }) {
   });
 
   return (
-    `💱 *PAJ Cash Live Rate*\n\n` +
+    `💱 *PAJ live Rate*\n\n` +
     `📥 Buy (onramp) — ${onRamp.pair}: *${onRamp.rate.toLocaleString("en-NG")}*${onTrend}\n` +
     `📤 Sell (offramp) — ${offRamp.pair}: *${offRamp.rate.toLocaleString("en-NG")}*${offTrend}\n\n` +
     `🕒 ${time} (WAT)`
