@@ -1,5 +1,7 @@
-let lastOnRamp = null;
-let lastOffRamp = null;
+const { ngnPerUsd, formatNgn } = require("./rateUtils");
+
+let lastBuyRate = null;
+let lastSellRate = null;
 
 function trendArrow(current, previous) {
   if (previous === null) return "";
@@ -9,10 +11,13 @@ function trendArrow(current, previous) {
 }
 
 function formatRateMessage({ onRamp, offRamp, fetchedAt }) {
-  const onTrend = trendArrow(onRamp.rate, lastOnRamp);
-  const offTrend = trendArrow(offRamp.rate, lastOffRamp);
-  lastOnRamp = onRamp.rate;
-  lastOffRamp = offRamp.rate;
+  const buyRate = ngnPerUsd(onRamp);
+  const sellRate = ngnPerUsd(offRamp);
+
+  const buyTrend = trendArrow(buyRate, lastBuyRate);
+  const sellTrend = trendArrow(sellRate, lastSellRate);
+  lastBuyRate = buyRate;
+  lastSellRate = sellRate;
 
   const time = fetchedAt.toLocaleTimeString("en-NG", {
     hour: "2-digit",
@@ -21,9 +26,9 @@ function formatRateMessage({ onRamp, offRamp, fetchedAt }) {
   });
 
   return (
-    `💱 *PAJ live Rate*\n\n` +
-    `📥 Buy (onramp) — ${onRamp.pair}: *${onRamp.rate.toLocaleString("en-NG")}*${onTrend}\n` +
-    `📤 Sell (offramp) — ${offRamp.pair}: *${offRamp.rate.toLocaleString("en-NG")}*${offTrend}\n\n` +
+    `💱 *PAJ Live Rate*\n\n` +
+    `📥 Buy — $1 = *${formatNgn(buyRate)}*${buyTrend}\n` +
+    `📤 Sell — $1 = *${formatNgn(sellRate)}*${sellTrend}\n\n` +
     `🕒 ${time} (WAT)`
   );
 }
