@@ -1,35 +1,39 @@
 /**
  * convert.js
  * ----------
- * Converts an amount between fiat and crypto using the live onramp
- * (buy) / offramp (sell) rates. Defaults to treating the amount as
- * fiat unless a crypto symbol is given.
+ * Converts between Naira and USD-pegged assets (USD, USDT, USDC, USDG —
+ * all treated as equivalent) using the live buy/sell rates.
+ * No unit given → amount is assumed to be Naira.
  */
 
-function convert(amount, unit, rateData) {
+const { normalizeUnit, ngnPerUsd, formatNgn, formatUsd } = require("./rateUtils");
+
+function convert(amount, rawUnit, rateData) {
   const { onRamp, offRamp } = rateData;
-  const [fiatSymbol, cryptoSymbol] = onRamp.pair.split("/");
+  const unit = normalizeUnit(rawUnit) || "NGN";
 
-  const isFiat = !unit || unit.toUpperCase() === fiatSymbol.toUpperCase();
+  if (unit !== "NGN" && unit !== "USD") {
+    return { error: `Unknown unit "${rawUnit}". Try NGN, USD, USDT, USDC, or USDG.` };
+  }
 
-  if (isFiat) {
-    const cryptoAmount = amount / onRamp.rate;
+  if (unit === "NGN") {
+    // Naira -> USD-equivalent, at the buy (onramp) rate.
+    const rate = ngnPerUsd(onRamp);
+    const usdAmount = amount / rate;
     return {
-      input: `${amount.toLocaleString("en-NG")} ${fiatSymbol}`,
-      output: `${cryptoAmount.toFixed(6)} ${cryptoSymbol}`,
-      rateLine: `Buy rate: 1 ${cryptoSymbol} = ${onRamp.rate.toLocaleString("en-NG")} ${fiatSymbol}`,
+      input: formatNgn(amount),
+      output: formatUsd(usdAmount),
+      rateLine: `Buy rate: $1 = ${formatNgn(rate)}`,
     };
   }
 
-  if (unit.toUpperCase() !== cryptoSymbol.toUpperCase()) {
-    return { error: `Unknown unit "${unit}". Use ${fiatSymbol} or ${cryptoSymbol}.` };
-  }
-
-  const fiatAmount = amount * offRamp.rate;
+  // USD-equivalent -> Naira, at the sell (offramp) rate.
+  const rate = ngnPerUsd(offRamp);
+  const ngnAmount = amount * rate;
   return {
-    input: `${amount} ${cryptoSymbol}`,
-    output: `${fiatAmount.toLocaleString("en-NG")} ${fiatSymbol}`,
-    rateLine: `Sell rate: 1 ${cryptoSymbol} = ${offRamp.rate.toLocaleString("en-NG")} ${fiatSymbol}`,
+    input: `${amount} ${(rawUnit || "USD").toUpperCase()}`,
+    output: formatNgn(ngnAmount),
+    rateLine: `Sell rate: $1 = ${formatNgn(rate)}`,
   };
 }
 
