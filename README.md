@@ -15,10 +15,6 @@ intervals.
 - Send `/convert <amount> [unit]` to convert between fiat and crypto at the live rate
   - `/convert 50000` → how much crypto 50,000 NGN buys right now
   - `/convert 25 USDT` → how much NGN 25 USDT sells for right now
-- Send `/alert above|below <price> [buy|sell]` to get a one-time DM when the rate
-  crosses your target (defaults to the buy/onramp rate)
-  - `/alert above 1650` or `/alert below 1600 sell`
-- Send `/alerts` to see your active alerts, `/removealert <id>` to cancel one
 - Send `/start` for a quick intro
 
 Each rate update shows:
