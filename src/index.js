@@ -46,10 +46,10 @@ bot.onText(/\/rate/, async (msg) => {
 bot.onText(/\/start/, (msg) => {
   const message = 
     `Hi! 👋 Welcome to PajRate!\n\n` +
-    `I'm here to help PAJ rates instantly.\n\n` +
+    `I'm here to show you PAJ rates instantly.\n\n` +
     `<b>What I can do:</b>\n` +
     `/rate - Get live buy/sell rates\n` +
-    `/convert <amount> <ngn|usdc> - Quick conversions\n` +
+    `/convert &lt;amount&gt; &lt;ngn|usdc&gt; - Quick conversions\n` +
     `<b>Pro tip:</b> Use @PajRate_bot in any chat to get rates without opening me!\n\n` +
     `Try /rate 👇`;
   
