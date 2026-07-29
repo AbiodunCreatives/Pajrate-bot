@@ -2,7 +2,9 @@ require("dotenv").config();
 const express = require("express");
 const cron = require("node-cron");
 const TelegramBot = require("node-telegram-bot-api");
-const { trackUser, getTotalUsers } = require("./database");
+const users = new Set();
+const getTotalUsers = () => users.size;
+const trackUser = (userId) => users.add(userId);
 
 const { getRate } = require("./rateSource");
 const { formatRateMessage } = require("./formatMessage");
@@ -151,13 +153,8 @@ bot.on("polling_error", (err) => {
 });
 
 bot.onText(/\/stats/, async (msg) => {
-  try {
-    const totalUsers = await getTotalUsers();
-    const message = `📊 <b>PajRate Stats</b>\n\n👥 Total Users: <code>${totalUsers}</code>\n\nYou're part of a growing community! 🚀`;
-    await bot.sendMessage(msg.chat.id, message, { parse_mode: "HTML" });
-  } catch (err) {
-    await bot.sendMessage(msg.chat.id, "Could not fetch stats");
-  }
+  const totalUsers = getTotalUsers();
+  await bot.sendMessage(msg.chat.id, `📊 Total users: ${totalUsers}`);
 });
 
 // ---- Scheduled channel broadcast + price alert checks ----
