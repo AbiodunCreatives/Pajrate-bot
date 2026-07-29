@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for pajrate-bot on 2026-07-27T23:49:47Z
+# fly.toml app configuration file generated for pajrate-bot on 2026-07-29T05:47:34Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -21,11 +21,3 @@ primary_region = 'ams'
 [[vm]]
   size = 'shared-cpu-1x'
   memory = '256mb'
-
-# Price alerts are stored in a local JSON file (./data/alerts.json) which
-# lives on the machine's local disk and is wiped on redeploy. To keep
-# alerts across deploys, create a volume and mount it:
-#   fly volumes create pajrate_data --size 1 --region ams
-# [[mounts]]
-#   source = "pajrate_data"
-#   destination = "/app/data"
