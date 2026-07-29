@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cron = require("node-cron");
 const TelegramBot = require("node-telegram-bot-api");
+const { trackUser, getTotalUsers } = require("./database");
 
 const { getRate } = require("./rateSource");
 const { formatRateMessage } = require("./formatMessage");
@@ -25,7 +26,8 @@ console.log("PAJ Rate bot starting...");
 // ---- On-demand /rate command ----
 bot.onText(/\/rate/, async (msg) => {
   const chatId = msg.chat.id;
-  try {
+  try { 
+    await trackUser(msg.chat.id, msg.from.username);
     const rateData = await getRate();
     await bot.sendMessage(chatId, formatRateMessage(rateData), {
       parse_mode: "Markdown",
@@ -40,13 +42,16 @@ bot.onText(/\/rate/, async (msg) => {
 });
 
 bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(
-    msg.chat.id,
-    "💱 Live PAJ rates\n\n" +
-      "/rate for buy/sell Price\n" +
-      "/convert &lt;amount&gt; for ₦ ⇄ $",
-    { parse_mode: "HTML" }
-  );
+  const message = 
+    `Hi! 👋 Welcome to PajRate!\n\n` +
+    `I'm here to help PAJ rates instantly.\n\n` +
+    `<b>What I can do:</b>\n` +
+    `/rate - Get live buy/sell rates\n` +
+    `/convert <amount> <ngn|usdc> - Quick conversions\n` +
+    `<b>Pro tip:</b> Use @PajRate_bot in any chat to get rates without opening me!\n\n` +
+    `Try /rate 👇`;
+  
+  bot.sendMessage(msg.chat.id, message, { parse_mode: "HTML" });
 });
 
 // ---- On-demand /convert command ----
@@ -63,6 +68,7 @@ bot.onText(/\/convert\s+([\d.,]+)\s*(\S+)?/i, async (msg, match) => {
   }
 
   try {
+    await trackUser(msg.chat.id, msg.from.username);
     const rateData = await getRate();
     const result = convert(amount, unit, rateData);
 
@@ -142,6 +148,16 @@ bot.onText(/\/removealert\s+(\d+)/i, async (msg, match) => {
 
 bot.on("polling_error", (err) => {
   console.error("Polling error:", err.message);
+});
+
+bot.onText(/\/stats/, async (msg) => {
+  try {
+    const totalUsers = await getTotalUsers();
+    const message = `📊 <b>PajRate Stats</b>\n\n👥 Total Users: <code>${totalUsers}</code>\n\nYou're part of a growing community! 🚀`;
+    await bot.sendMessage(msg.chat.id, message, { parse_mode: "HTML" });
+  } catch (err) {
+    await bot.sendMessage(msg.chat.id, "Could not fetch stats");
+  }
 });
 
 // ---- Scheduled channel broadcast + price alert checks ----
