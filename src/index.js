@@ -25,32 +25,6 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 console.log("PAJ Rate bot starting...");
 
-// Handle PAJ Cash webhooks
-app.post('/webhook/pajcash', async (req, res) => {
-  try {
-    const { transactionId, status, userId, amount, type } = req.body;
-
-    // Verify webhook signature
-    const signature = req.headers['x-pajcash-signature'];
-    // TODO: Verify signature against PAJCASH_WEBHOOK_PATH_SECRET
-
-    if (status === 'completed') {
-      const msg = type === 'buy' 
-        ? `✅ Buy completed! You got ${amount} USDC`
-        : `✅ Sell completed! You got ₦${amount}`;
-      
-      await bot.sendMessage(userId, msg);
-    } else if (status === 'failed') {
-      await bot.sendMessage(userId, `❌ Transaction ${transactionId} failed`);
-    }
-
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Webhook error:", err);
-    res.sendStatus(500);
-  }
-});
-
 // ---- On-demand /rate command ----
 bot.onText(/\/rate/, async (msg) => {
   const chatId = msg.chat.id;
