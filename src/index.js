@@ -270,7 +270,29 @@ if (CHANNEL_ID) {
   );
 }
 
-// ---- Tiny HTTP server so Fly.io health checks pass ----
+// First: Initialize Express
 const app = express();
-app.get("/", (_req, res) => res.send("PAJ rate bot is running."));
+
+// Then: Add webhook handler
+app.post('/webhook/pajcash', async (req, res) => {
+  try {
+    const { status, userId, amount, type } = req.body;
+    
+    if (status === 'completed') {
+      const msg = type === 'buy' 
+        ? `✅ Buy completed! You got ${amount} USDC`
+        : `✅ Sell completed! You got ₦${amount}`;
+      await bot.sendMessage(userId, msg);
+    }
+    
+    res.sendStatus(200);
+  } catch (err) {
+    res.sendStatus(500);
+  }
+});
+
+// Then: Add health check
+app.get("/", (_req, res) => res.send("OK"));
+
+// Finally: Start server
 app.listen(PORT, () => console.log(`Health check server on port ${PORT}`));
