@@ -194,3 +194,7 @@ if (CHANNEL_ID) {
     "TELEGRAM_CHANNEL_ID not set — skipping scheduled broadcasts. /rate, /convert and price alerts still work."
   );
 }
+// ---- Tiny HTTP server so Fly.io health checks pass ----
+const app = express();
+app.get("/", (_req, res) => res.send("PAJ rate bot is running."));
+app.listen(PORT, () => console.log(`Health check server on port ${PORT}`));
