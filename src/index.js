@@ -90,6 +90,56 @@ bot.onText(/\/convert\s+([\d.,]+)\s*(\S+)?/i, async (msg, match) => {
   }
 });
 
+// ---- Buy Command ----
+bot.onText(/\/buy\s+(\d+(?:\.\d+)?)\s+(\w+)/i, async (msg, match) => {
+  try {
+    const amount = parseFloat(match[1]);
+    const currency = match[2].toUpperCase();
+
+    if (!['NGN', 'USDC'].includes(currency)) {
+      await bot.sendMessage(msg.chat.id, "❌ Only NGN and USDC supported. Usage: /buy 100 ngn");
+      return;
+    }
+
+    const transaction = await paj.buy({
+      amount: amount,
+      currency: currency,
+      userId: msg.chat.id.toString()
+    });
+
+    const message = `💳 <b>Buy ${amount} ${currency}</b>\n\n<a href="${transaction.paymentLink}">Complete Payment</a>`;
+    await bot.sendMessage(msg.chat.id, message, { parse_mode: "HTML", disable_web_page_preview: false });
+  } catch (err) {
+    console.error("Buy error:", err.message);
+    await bot.sendMessage(msg.chat.id, "❌ Failed to create transaction");
+  }
+});
+
+// ---- Sell Command ----
+bot.onText(/\/sell\s+(\d+(?:\.\d+)?)\s+(\w+)/i, async (msg, match) => {
+  try {
+    const amount = parseFloat(match[1]);
+    const currency = match[2].toUpperCase();
+
+    if (currency !== 'USDC') {
+      await bot.sendMessage(msg.chat.id, "❌ Can only sell USDC. Usage: /sell 10 usdc");
+      return;
+    }
+
+    const transaction = await paj.sell({
+      amount: amount,
+      currency: currency,
+      userId: msg.chat.id.toString()
+    });
+
+    const message = `💸 <b>Sell ${amount} USDC</b>\n\n<a href="${transaction.paymentLink}">Complete Transaction</a>`;
+    await bot.sendMessage(msg.chat.id, message, { parse_mode: "HTML", disable_web_page_preview: false });
+  } catch (err) {
+    console.error("Sell error:", err.message);
+    await bot.sendMessage(msg.chat.id, "❌ Failed to create transaction");
+  }
+});
+
 // ---- Price alert commands ----
 bot.onText(/\/alert\s+(above|below)\s+([\d.,]+)(?:\s+(buy|sell))?/i, async (msg, match) => {
   const chatId = msg.chat.id;
