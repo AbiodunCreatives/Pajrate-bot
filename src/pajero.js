@@ -84,7 +84,7 @@ async function handleGreeting(bot, msg) {
   const firstName = msg.from?.first_name || "there";
   await bot.sendMessage(
     msg.chat.id,
-    `👋 Hey ${firstName}\\! I'm *Pajero*, your PAJ Cash assistant\\.\n\n` +
+    `👋 Hey ${firstName}\\! I'm *Pajero*, your PAJ assistant\\.\n\n` +
     `Just talk to me naturally\\. For example:\n\n` +
     `  _"what's the rate"_\n` +
     `  _"convert 500 usdt"_\n` +

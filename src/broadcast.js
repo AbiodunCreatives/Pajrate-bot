@@ -15,7 +15,7 @@
 const { readUsers, isBroadcastSent, markBroadcastSent } = require("./store");
 
 // Unique ID for this broadcast — change this to re-send a future broadcast.
-const BROADCAST_ID    = "v2-features";
+const BROADCAST_ID    = "v3-features";
 const BROADCAST_DELAY_MS = 3 * 60 * 60 * 1000; // 3 hours
 const MSG_INTERVAL_MS    = 50;                   // ~20 msgs/s — safe under Telegram's limit
 
@@ -23,16 +23,15 @@ const MESSAGE =
   `📣 *PajRate just got an upgrade\\!*\n\n` +
   `Here's what's new:\n\n` +
   `🔄 *More tokens to convert*\n` +
-  `Convert SOL, JUP, BONK and ANSEM directly to NGN at live prices\\.\n` +
-  `  • /convert 5 SOL\n` +
-  `  • /convert 1000000 BONK\n` +
-  `  • /convert 500 ANSEM\n\n` +
+  `Convert SOL, JUP, BONK and ANSEM directly to NGN at live prices\\.\n\n` +
   `🔔 *Smarter price alerts*\n` +
   `Set alerts for any token — not just PAJ rates\\.\n` +
   `  • /alert SOL above 150\n` +
-  `  • /alert BONK below 0\\.00003\n` +
   `  • /alert buy above 1650\n\n` +
-  `Type /help to see everything the bot can do\\.`;
+  `🤖 *Meet Pajero* — just talk naturally, no commands needed\\.\n` +
+  `_"convert 5 sol"_, _"what's the rate"_, _"alert me when SOL hits 150"_\n\n` +
+  `🪙 *PENGU & SKR now supported* — convert and set alerts for both\\.\n\n` +
+  `Type /help to explore\\.`;
 
 /**
  * Sends the broadcast message to a single chat, swallowing errors so one

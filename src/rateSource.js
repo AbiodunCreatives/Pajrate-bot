@@ -1,7 +1,7 @@
 /**
  * rateSource.js
  * -------------
- * Talks to PAJ Cash's real, public rate endpoint — the same one their
+ * Talks to PAJ's real, public rate endpoint — the same one their
  * official `paj_ramp` SDK (npmjs.com/package/paj_ramp) uses under the hood.
  * No API key or login required; it's the `/pub/rate` route.
  *
