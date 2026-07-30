@@ -13,6 +13,7 @@
     "express": "^4.19.2",
     "node-cron": "^3.0.3",
     "node-telegram-bot-api": "^0.66.0"
+    "paj_ramp": "^1.0.0",
   },
   "engines": {
     "node": ">=20"
