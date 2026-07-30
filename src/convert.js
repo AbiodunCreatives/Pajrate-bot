@@ -43,7 +43,7 @@ async function convert(amount, rawUnit, rateData) {
     };
   }
 
-  // ── Crypto tokens (SOL, JUP, BONK, ANSEM) ───────────────────────────────────
+  // ── Crypto tokens (SOL, JUP, BONK, ANSEM, PENGU, SKR) ──────────────────────
   if (CRYPTO_TOKENS.has(unit)) {
     let priceData;
     try {
@@ -72,7 +72,7 @@ async function convert(amount, rawUnit, rateData) {
   return {
     error:
       `I don't recognise the unit *${rawUnit}*.\n\n` +
-      `Supported: NGN, USDT, USDC, USD, SOL, JUP, BONK, ANSEM\n` +
+      `Supported: NGN, USDT, USDC, USD, SOL, JUP, BONK, ANSEM, PENGU, SKR\n` +
       `Example: \`/convert 25 USDT\` or \`/convert 5 SOL\``,
   };
 }

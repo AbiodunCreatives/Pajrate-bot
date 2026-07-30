@@ -15,7 +15,7 @@
 const USD_ALIASES = new Set(["USD", "USDT", "USDC", "USDG"]);
 
 // Tokens whose USD prices come from CoinGecko
-const CRYPTO_TOKENS = new Set(["SOL", "JUP", "BONK", "ANSEM"]);
+const CRYPTO_TOKENS = new Set(["SOL", "JUP", "BONK", "ANSEM", "PENGU", "SKR"]);
 
 /** Normalizes user input into a canonical unit string. */
 function normalizeUnit(rawUnit) {
@@ -59,6 +59,8 @@ function formatUsd(amount) {
 function formatToken(amount, symbol) {
   const decimals = symbol === "BONK" ? 0
                  : symbol === "ANSEM" ? 2
+                 : symbol === "PENGU" ? 4
+                 : symbol === "SKR"   ? 4
                  : 4;
   return `${amount.toLocaleString("en-US", {
     minimumFractionDigits: 0,

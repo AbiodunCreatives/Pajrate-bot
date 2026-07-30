@@ -71,8 +71,10 @@ bot.onText(/^\/help(@\w+)?$/i, (msg) => {
     `  • /convert 5 SOL → how much NGN 5 SOL is worth\n` +
     `  • /convert 100 JUP → how much NGN 100 JUP is worth\n` +
     `  • /convert 1000000 BONK → how much NGN 1M BONK is worth\n` +
-    `  • /convert 500 ANSEM → how much NGN 500 ANSEM is worth\n\n` +
-    `_Supported: NGN, USDT, USDC, USD, SOL, JUP, BONK, ANSEM_\n\n` +
+    `  • /convert 500 ANSEM → how much NGN 500 ANSEM is worth\n` +
+    `  • /convert 200 PENGU → how much NGN 200 PENGU is worth\n` +
+    `  • /convert 1000 SKR → how much NGN 1,000 SKR is worth\n\n` +
+    `_Supported: NGN, USDT, USDC, USD, SOL, JUP, BONK, ANSEM, PENGU, SKR_\n\n` +
     `🔔 /alert <token> <above|below> <price>\n` +
     `🔔 /alert <buy|sell> <above|below> <price>\n` +
     `Get a one\\-time ping when a price crosses your target\\.\n` +
@@ -110,7 +112,7 @@ bot.onText(/^\/rate(@\w+)?$/i, async (msg) => {
 bot.onText(/^\/convert(@\w+)?$/i, async (msg) => {
   await bot.sendMessage(
     msg.chat.id,
-    `🔄 *Convert*\n\nUsage: \`/convert <amount> [unit]\`\n\nExamples:\n  • \`/convert 50000\` — NGN → USDT\n  • \`/convert 25 USDT\` — USDT → NGN\n  • \`/convert 5 SOL\` — SOL → NGN\n  • \`/convert 100 JUP\` — JUP → NGN\n  • \`/convert 1000000 BONK\` — BONK → NGN\n  • \`/convert 500 ANSEM\` — ANSEM → NGN`,
+    `🔄 *Convert*\n\nUsage: \`/convert <amount> [unit]\`\n\nExamples:\n  • \`/convert 50000\` — NGN → USDT\n  • \`/convert 25 USDT\` — USDT → NGN\n  • \`/convert 5 SOL\` — SOL → NGN\n  • \`/convert 100 JUP\` — JUP → NGN\n  • \`/convert 1000000 BONK\` — BONK → NGN\n  • \`/convert 500 ANSEM\` — ANSEM → NGN\n  • \`/convert 200 PENGU\` — PENGU → NGN\n  • \`/convert 1000 SKR\` — SKR → NGN`,
     { parse_mode: "Markdown" }
   );
 });
@@ -156,7 +158,7 @@ bot.onText(/^\/convert\s+([\d.,]+)\s*(\S+)?$/i, async (msg, match) => {
 //   PAJ   : /alert buy above 1650  |  /alert sell below 1500
 
 // Token alert: /alert <TOKEN> <above|below> <price>
-bot.onText(/^\/alert\s+(SOL|JUP|BONK|ANSEM)\s+(above|below)\s+([\d.,]+)$/i, async (msg, match) => {
+bot.onText(/^\/alert\s+(SOL|JUP|BONK|ANSEM|PENGU|SKR)\s+(above|below)\s+([\d.,]+)$/i, async (msg, match) => {
   const chatId    = msg.chat.id;
   const token     = match[1].toUpperCase();
   const direction = match[2].toLowerCase();
@@ -207,7 +209,7 @@ bot.onText(/^\/alert\s+(buy|sell)\s+(above|below)\s+([\d.,]+)$/i, async (msg, ma
 // Catch bare /alert or malformed syntax — show usage guide
 bot.onText(/^\/alert(\s.*)?$/i, async (msg) => {
   const text       = msg.text || "";
-  const validToken = /^\/alert\s+(SOL|JUP|BONK|ANSEM)\s+(above|below)\s+[\d.,]+$/i.test(text);
+  const validToken = /^\/alert\s+(SOL|JUP|BONK|ANSEM|PENGU|SKR)\s+(above|below)\s+[\d.,]+$/i.test(text);
   const validPaj   = /^\/alert\s+(buy|sell)\s+(above|below)\s+[\d.,]+$/i.test(text);
   if (validToken || validPaj) return;
 
@@ -218,7 +220,9 @@ bot.onText(/^\/alert(\s.*)?$/i, async (msg) => {
     `  • \`/alert SOL above 150\`\n` +
     `  • \`/alert BONK below 0\\.00003\`\n` +
     `  • \`/alert JUP above 1\\.50\`\n` +
-    `  • \`/alert ANSEM above 0\\.10\`\n\n` +
+    `  • \`/alert ANSEM above 0\\.10\`\n` +
+    `  • \`/alert PENGU above 0\\.05\`\n` +
+    `  • \`/alert SKR above 0\\.10\`\n\n` +
     `*PAJ rate alerts* \\(NGN\\):\n` +
     `  • \`/alert buy above 1650\`\n` +
     `  • \`/alert sell below 1500\``,

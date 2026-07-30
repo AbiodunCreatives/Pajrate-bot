@@ -26,6 +26,8 @@ const TOKEN_IDS = {
   JUP:   "jupiter-exchange-solana",
   BONK:  "bonk",
   ANSEM: "the-black-bull",
+  PENGU: "pudgy-penguins",
+  SKR:   "seeker",
 };
 
 const TIMEOUT_MS   = 10_000;

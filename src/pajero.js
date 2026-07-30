@@ -40,12 +40,12 @@ const INTENTS = [
   // Convert with amount + optional unit: "convert 500 usdt", "500 sol to ngn", "convert 50000"
   {
     name: "convert",
-    pattern: /(?:convert\s+)?([\d,]+(?:\.\d+)?)\s*(sol|jup|bonk|ansem|usdt|usdc|usd|ngn|naira)?(?:\s+to\s+(ngn|usdt|sol|jup|bonk|ansem))?/i,
+    pattern: /(?:convert\s+)?([\d,]+(?:\.\d+)?)\s*(sol|jup|bonk|ansem|pengu|skr|usdt|usdc|usd|ngn|naira)?(?:\s+to\s+(ngn|usdt|sol|jup|bonk|ansem|pengu|skr))?/i,
   },
   // Alert set — token: "alert when sol hits 150", "notify me when bonk reaches 0.00003"
   {
     name: "alert_token",
-    pattern: /(?:alert|notify|ping)(?:\s+me)?(?:\s+when)?\s+(sol|jup|bonk|ansem)\s+(?:hits?|reaches?|goes?|is|above|below|crosses?|>|<)\s*(above|below|over|under)?\s*([\d.,]+)/i,
+    pattern: /(?:alert|notify|ping)(?:\s+me)?(?:\s+when)?\s+(sol|jup|bonk|ansem|pengu|skr)\s+(?:hits?|reaches?|goes?|is|above|below|crosses?|>|<)\s*(above|below|over|under)?\s*([\d.,]+)/i,
   },
   // Alert set — PAJ rate: "alert when buy rate above 1650", "notify sell below 1500"
   {
@@ -215,6 +215,8 @@ async function handleHelp(bot, msg) {
     `  _"convert 100 jup"_ — JUP → NGN\n` +
     `  _"convert 1000000 bonk"_ — BONK → NGN\n` +
     `  _"convert 500 ansem"_ — ANSEM → NGN\n` +
+    `  _"convert 200 pengu"_ — PENGU → NGN\n` +
+    `  _"convert 1000 skr"_ — SKR → NGN\n` +
     `  _"alert me when sol hits 150"_\n` +
     `  _"alert me when buy rate above 1650"_\n` +
     `  _"show my alerts"_\n` +
