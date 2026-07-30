@@ -31,9 +31,21 @@ const getTotalUsers = () => readUsers().length;
 
 console.log("PAJ Rate bot starting...");
 
+// ─── Register bot commands (Telegram menu button) ─────────────────────────────
+
+bot.setMyCommands([
+  { command: "rate",         description: "Get live PAJ buy & sell rates" },
+  { command: "convert",      description: "Convert between NGN and crypto" },
+  { command: "alert",        description: "Set a price alert" },
+  { command: "alerts",       description: "View your active alerts" },
+  { command: "removealert",  description: "Remove an alert by ID" },
+  { command: "help",         description: "Show command guide" },
+]).then(() => console.log("Bot commands registered."))
+  .catch((err) => console.error("Failed to register bot commands:", err.message));
+
 // ─── /start ───────────────────────────────────────────────────────────────────
 
-bot.onText(/^\/start$/i, (msg) => {
+bot.onText(/^\/start(@\w+)?$/i, (msg) => {
   trackUser(msg.chat.id, msg.from?.username);
   const message =
     `👋 Welcome to *PajRate\\!*\n\n` +
@@ -46,7 +58,7 @@ bot.onText(/^\/start$/i, (msg) => {
 
 // ─── /help ────────────────────────────────────────────────────────────────────
 
-bot.onText(/^\/help$/i, (msg) => {
+bot.onText(/^\/help(@\w+)?$/i, (msg) => {
   const message =
     `ℹ️ *PajRate — Command Guide*\n\n` +
     `💱 /rate\n` +
@@ -76,7 +88,7 @@ bot.onText(/^\/help$/i, (msg) => {
 
 // ─── /rate ────────────────────────────────────────────────────────────────────
 
-bot.onText(/^\/rate$/i, async (msg) => {
+bot.onText(/^\/rate(@\w+)?$/i, async (msg) => {
   const chatId = msg.chat.id;
   trackUser(chatId, msg.from?.username);
   try {
@@ -94,7 +106,7 @@ bot.onText(/^\/rate$/i, async (msg) => {
 // ─── /convert ─────────────────────────────────────────────────────────────────
 
 // No amount provided — show usage hint
-bot.onText(/^\/convert$/i, async (msg) => {
+bot.onText(/^\/convert(@\w+)?$/i, async (msg) => {
   await bot.sendMessage(
     msg.chat.id,
     `🔄 *Convert*\n\nUsage: \`/convert <amount> [unit]\`\n\nExamples:\n  • \`/convert 50000\` — NGN → USDT\n  • \`/convert 25 USDT\` — USDT → NGN\n  • \`/convert 5 SOL\` — SOL → NGN\n  • \`/convert 100 JUP\` — JUP → NGN\n  • \`/convert 1000000 BONK\` — BONK → NGN\n  • \`/convert 500 ANSEM\` — ANSEM → NGN`,
@@ -215,7 +227,7 @@ bot.onText(/^\/alert(\s.*)?$/i, async (msg) => {
 
 // ─── /alerts ──────────────────────────────────────────────────────────────────
 
-bot.onText(/^\/alerts$/i, async (msg) => {
+bot.onText(/^\/alerts(@\w+)?$/i, async (msg) => {
   const chatId = msg.chat.id;
   const alerts = listAlerts(chatId);
 
@@ -238,9 +250,9 @@ bot.onText(/^\/alerts$/i, async (msg) => {
 
 // ─── /removealert ─────────────────────────────────────────────────────────────
 
-bot.onText(/^\/removealert\s+(\d+)$/i, async (msg, match) => {
+bot.onText(/^\/removealert(@\w+)?\s+(\d+)$/i, async (msg, match) => {
   const chatId  = msg.chat.id;
-  const id      = parseInt(match[1], 10);
+  const id      = parseInt(match[2], 10);
   const removed = removeAlert(chatId, id);
 
   await bot.sendMessage(
@@ -253,7 +265,7 @@ bot.onText(/^\/removealert\s+(\d+)$/i, async (msg, match) => {
 
 // ─── /stats (admin only) ──────────────────────────────────────────────────────
 
-bot.onText(/^\/stats$/i, async (msg) => {
+bot.onText(/^\/stats(@\w+)?$/i, async (msg) => {
   const chatId = String(msg.chat.id);
 
   if (ADMIN_CHAT_ID && chatId !== ADMIN_CHAT_ID) {
