@@ -1,39 +1,79 @@
 /**
  * convert.js
  * ----------
- * Converts between Naira and USD-pegged assets (USD, USDT, USDC, USDG —
- * all treated as equivalent) using the live buy/sell rates.
- * No unit given → amount is assumed to be Naira.
+ * Converts between Naira, USD-pegged stablecoins, and Solana-ecosystem
+ * tokens (SOL, JUP, BONK, ANSEM) using PAJ's live USD/NGN rate chained
+ * with CoinGecko token prices.
+ *
+ * Conversion chains:
+ *   NGN  → USDT/USD        :  NGN ÷ buyRate
+ *   USDT → NGN             :  USDT × sellRate
+ *   token → NGN            :  tokenAmount × tokenUsdPrice × sellRate
+ *
+ * No unit given → amount is assumed to be NGN.
  */
 
-const { normalizeUnit, ngnPerUsd, formatNgn, formatUsd } = require("./rateUtils");
+const { normalizeUnit, CRYPTO_TOKENS, ngnPerUsd, formatNgn, formatUsd, formatToken } = require("./rateUtils");
+const { getTokenPricesUsd } = require("./tokenPrices");
 
-function convert(amount, rawUnit, rateData) {
+async function convert(amount, rawUnit, rateData) {
   const { onRamp, offRamp } = rateData;
   const unit = normalizeUnit(rawUnit) || "NGN";
 
-  if (unit !== "NGN" && unit !== "USD") {
-    return { error: `Unknown unit "${rawUnit}". Try NGN, USD, USDT, USDC, or USDG.` };
-  }
+  const buyRate  = ngnPerUsd(onRamp);
+  const sellRate = ngnPerUsd(offRamp);
 
+  // ── NGN → USDT ──────────────────────────────────────────────────────────────
   if (unit === "NGN") {
-    // Naira -> USD-equivalent, at the buy (onramp) rate.
-    const rate = ngnPerUsd(onRamp);
-    const usdAmount = amount / rate;
+    const usdAmount = amount / buyRate;
     return {
-      input: formatNgn(amount),
-      output: formatUsd(usdAmount),
-      rateLine: `Buy rate: $1 = ${formatNgn(rate)}`,
+      input:    formatNgn(amount),
+      output:   `${formatUsd(usdAmount)} USDT`,
+      rateLine: `📥 Buy rate: $1 = ${formatNgn(buyRate)}`,
     };
   }
 
-  // USD-equivalent -> Naira, at the sell (offramp) rate.
-  const rate = ngnPerUsd(offRamp);
-  const ngnAmount = amount * rate;
+  // ── USDT/USD → NGN ──────────────────────────────────────────────────────────
+  if (unit === "USD") {
+    const ngnAmount = amount * sellRate;
+    return {
+      input:    `${amount} ${(rawUnit || "USDT").toUpperCase()}`,
+      output:   formatNgn(ngnAmount),
+      rateLine: `📤 Sell rate: $1 = ${formatNgn(sellRate)}`,
+    };
+  }
+
+  // ── Crypto tokens (SOL, JUP, BONK, ANSEM) ───────────────────────────────────
+  if (CRYPTO_TOKENS.has(unit)) {
+    let priceData;
+    try {
+      priceData = await getTokenPricesUsd();
+    } catch (err) {
+      return { error: `Couldn't fetch ${unit} price right now. Please try again in a moment.` };
+    }
+
+    const { prices, stale, fetchedAt } = priceData;
+    const tokenUsdPrice = prices[unit];
+    const ngnAmount     = amount * tokenUsdPrice * sellRate;
+
+    const ageSeconds = Math.round((Date.now() - fetchedAt) / 1000);
+    const rateLine   = stale
+      ? `📤 ${unit} ≈ ${formatUsd(tokenUsdPrice)} · Sell rate: $1 = ${formatNgn(sellRate)}\n⚠️ _Price data is ~${ageSeconds}s old — CoinGecko may be down_`
+      : `📤 ${unit} = ${formatUsd(tokenUsdPrice)} · Sell rate: $1 = ${formatNgn(sellRate)}`;
+
+    return {
+      input:    formatToken(amount, unit),
+      output:   formatNgn(ngnAmount),
+      rateLine,
+    };
+  }
+
+  // ── Unknown unit ─────────────────────────────────────────────────────────────
   return {
-    input: `${amount} ${(rawUnit || "USD").toUpperCase()}`,
-    output: formatNgn(ngnAmount),
-    rateLine: `Sell rate: $1 = ${formatNgn(rate)}`,
+    error:
+      `I don't recognise the unit *${rawUnit}*.\n\n` +
+      `Supported: NGN, USDT, USDC, USD, SOL, JUP, BONK, ANSEM\n` +
+      `Example: \`/convert 25 USDT\` or \`/convert 5 SOL\``,
   };
 }
 
