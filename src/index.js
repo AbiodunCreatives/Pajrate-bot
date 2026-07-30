@@ -280,6 +280,38 @@ bot.onText(/^\/stats(@\w+)?$/i, async (msg) => {
   );
 });
 
+// ─── Palero — friendly greeting agent ────────────────────────────────────────
+// Triggers on: "hi", "hello", "hey", "hi palero", "hello palero", etc.
+
+bot.on("message", async (msg) => {
+  if (!msg.text) return;
+
+  // Ignore commands
+  if (msg.text.startsWith("/")) return;
+
+  const text = msg.text.trim().toLowerCase();
+
+  const isGreeting = /^(hi|hello|hey|hiya|sup|yo)(\s+(palero|pajrate|bot))?[!.\s]*$/.test(text);
+  if (!isGreeting) return;
+
+  trackUser(msg.chat.id, msg.from?.username);
+  const firstName = msg.from?.first_name || "there";
+
+  await bot.sendMessage(
+    msg.chat.id,
+    `👋 Hey ${firstName}\\! I'm *Palero*, your PAJ Cash assistant\\.\n\n` +
+    `Here's what I can help you with:\n\n` +
+    `💱 /rate — Live PAJ buy & sell rates\n` +
+    `🔄 /convert 50000 — Convert NGN to USDT\n` +
+    `🔄 /convert 5 SOL — Convert SOL to NGN\n` +
+    `🔔 /alert SOL above 150 — Set a price alert\n` +
+    `📋 /alerts — See your active alerts\n` +
+    `ℹ️ /help — Full command guide\n\n` +
+    `Just tap a command or type one to get started 👇`,
+    { parse_mode: "MarkdownV2" }
+  );
+});
+
 // ─── Polling error handler ────────────────────────────────────────────────────
 
 bot.on("polling_error", (err) => {
