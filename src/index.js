@@ -18,6 +18,7 @@ const { handleBuyUsdcCommand,
 const { reconcileWebhook,
         getWebhookSecret,
         isPajCashCompleted }                                               = require("./pajcash");
+const { askPajero }                                                       = require("./brain");
 
 const BOT_TOKEN     = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID    = process.env.TELEGRAM_CHANNEL_ID;
@@ -369,7 +370,7 @@ bot.on("message", async (msg) => {
   if (!msg.text || msg.text.startsWith("/")) return;
   trackUser(msg.chat.id, msg.from?.username);
 
-  // Buy-USDC custom amount entry takes priority over Pajero
+  // Buy-USDC custom amount entry takes priority over everything
   const handled = await handleBuyUsdcText(
     bot,
     msg,
@@ -377,6 +378,16 @@ bot.on("message", async (msg) => {
   );
   if (handled) return;
 
+  // Try AI brain first — if GROQ_API_KEY is set it answers intelligently
+  // with live rate/price tools and conversation memory.
+  // Returns null when no API key is configured → fall back to pattern matching.
+  const aiReply = await askPajero(msg.text, msg.chat.id).catch(() => null);
+  if (aiReply) {
+    await bot.sendMessage(msg.chat.id, aiReply, { parse_mode: "Markdown" });
+    return;
+  }
+
+  // Fallback: regex pattern matching (always works, no API key needed)
   await pajeroHandle(bot, msg);
 });
 
