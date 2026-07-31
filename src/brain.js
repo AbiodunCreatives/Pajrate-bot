@@ -212,4 +212,14 @@ async function askPajero(question, chatId) {
   }
 }
 
-module.exports = { askPajero };
+/**
+ * Sanitize AI reply for Telegram Markdown (not MarkdownV2).
+ * Escapes characters that break the basic Markdown parser.
+ */
+function sanitizeForMarkdown(text) {
+  // Telegram basic Markdown only chokes on unescaped < > in some cases.
+  // Replace bare > that aren't part of a valid pattern.
+  return text.replace(/(?<!\*\*|__)>/g, "›"); // replace > with › (single right angle)
+}
+
+module.exports = { askPajero, sanitizeForMarkdown };

@@ -21,7 +21,7 @@ const { handleBuyUsdcCommand,
 const { reconcileWebhook,
         getWebhookSecret,
         isPajCashCompleted }                                               = require("./pajcash");
-const { askPajero }                                                       = require("./brain");
+const { askPajero, sanitizeForMarkdown } = require("./brain");
 
 const BOT_TOKEN     = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID    = process.env.TELEGRAM_CHANNEL_ID;
@@ -493,7 +493,7 @@ bot.on("message", async (msg) => {
     return null;
   });
   if (aiReply) {
-    await bot.sendMessage(msg.chat.id, aiReply);
+    await bot.sendMessage(msg.chat.id, sanitizeForMarkdown(aiReply), { parse_mode: "Markdown" });
     return;
   }
 
