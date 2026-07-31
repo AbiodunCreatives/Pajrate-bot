@@ -342,7 +342,7 @@ async function askPajero(question, chatId) {
     return reply;
   } catch (err) {
     console.error("[brain] error:", err.message);
-    return FALLBACK;
+    return null; // signal caller to fall back to pattern matching
   }
 }
 

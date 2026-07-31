@@ -489,7 +489,10 @@ bot.on("message", async (msg) => {
   // Try AI brain first — if GROQ_API_KEY is set it answers intelligently
   // with live rate/price tools and conversation memory.
   // Returns null when no API key is configured → fall back to pattern matching.
-  const aiReply = await askPajero(cleanText, msg.chat.id).catch(() => null);
+  const aiReply = await askPajero(cleanText, msg.chat.id).catch((err) => {
+    console.error("[brain] uncaught error:", err.message);
+    return null;
+  });
   if (aiReply) {
     await bot.sendMessage(msg.chat.id, aiReply, { parse_mode: "Markdown" });
     return;
