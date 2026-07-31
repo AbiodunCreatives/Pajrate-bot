@@ -145,14 +145,12 @@ async function createOnramp(telegramId, fiatAmount, recipientAddress) {
     throw new Error("Fiat amount must be greater than zero.");
 
   const usdcMint = (process.env.SOLANA_USDC_MINT ?? "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v").trim();
-  const apiKey   = (process.env.PAJCASH_API_KEY       ?? "").trim();
-  const token    = (process.env.PAJCASH_SESSION_TOKEN ?? "").trim();
   const isProd   = (process.env.NODE_ENV ?? "development") === "production";
   const feeRaw   = process.env.PAJCASH_BUSINESS_USDC_FEE;
   const fee      = feeRaw != null && feeRaw !== "" ? Number(feeRaw) : 0;
 
-  // Dev / missing-credentials fallback — mock order for local testing
-  if (!apiKey || !token || !isProd) {
+  // Dev-only mock — never runs in production
+  if (!isProd) {
     return createOnrampRecord({
       orderId:            `DEV-${randomUUID()}`,
       telegramId,
@@ -170,6 +168,10 @@ async function createOnramp(telegramId, fiatAmount, recipientAddress) {
       rawPayload:         { devMock: true },
     });
   }
+
+  // In production always use real credentials — throw early if missing
+  const apiKey = getApiKey();
+  const token  = getSessionToken();
 
   const reqBody = {
     fiatAmount: amount,
