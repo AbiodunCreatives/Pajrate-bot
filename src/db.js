@@ -31,10 +31,16 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   );
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth:      { persistSession: false },
-  realtime:  { transport: ws },
-});
+// Use placeholder values when env is missing so createClient doesn't throw at
+// startup. All actual DB calls will fail with a network error (not a crash).
+const supabase = createClient(
+  SUPABASE_URL  || "https://placeholder.supabase.co",
+  SUPABASE_SERVICE_ROLE_KEY || "placeholder-key",
+  {
+    auth:     { persistSession: false },
+    realtime: { transport: ws },
+  }
+);
 
 // ─── Rounding helpers ─────────────────────────────────────────────────────────
 
