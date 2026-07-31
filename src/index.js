@@ -37,6 +37,62 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 const trackUser     = (chatId, username) => upsertUser({ chatId, username });
 const getTotalUsers = () => readUsers().length;
 
+// ─── Bot identity (resolved after startup) ────────────────────────────────────
+let BOT_USERNAME = ""; // e.g. "PajRate_bot"
+bot.getMe().then((me) => {
+  BOT_USERNAME = (me.username || "").toLowerCase();
+  console.log(`Bot identity resolved: @${me.username}`);
+}).catch(() => {});
+
+/**
+ * Returns true when the bot should respond to a message in a group/supergroup.
+ * Always true in private chats.
+ *
+ * A group message counts as "addressed" when:
+ *   1. The bot is @mentioned in the text or caption
+ *   2. The message is a reply to one of the bot's own messages
+ */
+function isBotAddressed(msg) {
+  const chatType = msg.chat?.type ?? "private";
+  if (chatType === "private") return true;
+
+  const text = msg.text || msg.caption || "";
+
+  // @mention anywhere in the message
+  if (BOT_USERNAME && text.toLowerCase().includes(`@${BOT_USERNAME}`)) return true;
+
+  // Also check Telegram's entities array for mention entities pointing at us
+  const entities = msg.entities || msg.caption_entities || [];
+  for (const entity of entities) {
+    if (entity.type === "mention") {
+      const mentioned = text.slice(entity.offset + 1, entity.offset + entity.length).toLowerCase();
+      if (mentioned === BOT_USERNAME) return true;
+    }
+    if (entity.type === "text_mention" && entity.user?.id) {
+      // For users without usernames — compare by bot user ID
+      // BOT_USERNAME is set from getMe(), which also gives us the id via me.id
+      // We'll handle this via the me.id stored in BOT_ID below
+    }
+  }
+
+  // Reply to one of the bot's own messages
+  if (msg.reply_to_message?.from?.is_bot) {
+    const replyFrom = msg.reply_to_message.from.username?.toLowerCase() ?? "";
+    if (replyFrom === BOT_USERNAME) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Strip leading @botname from text so "  @PajRate_bot what's the rate"
+ * becomes "what's the rate" before handing to the AI / intent matcher.
+ */
+function stripBotMention(text) {
+  if (!BOT_USERNAME) return text.trim();
+  return text.replace(new RegExp(`^@${BOT_USERNAME}\\s*`, "i"), "").trim();
+}
+
 console.log("PAJ Rate bot starting...");
 
 // ─── Register bot commands (Telegram menu button) ─────────────────────────────
@@ -370,6 +426,12 @@ bot.on("message", async (msg) => {
   if (!msg.text || msg.text.startsWith("/")) return;
   trackUser(msg.chat.id, msg.from?.username);
 
+  // In groups, only respond when the bot is @mentioned or the message replies to the bot
+  if (!isBotAddressed(msg)) return;
+
+  // Strip "@BotName" prefix so the AI / intent matcher sees clean input
+  const cleanText = stripBotMention(msg.text);
+
   // Buy-USDC custom amount entry takes priority over everything
   const handled = await handleBuyUsdcText(
     bot,
@@ -381,14 +443,14 @@ bot.on("message", async (msg) => {
   // Try AI brain first — if GROQ_API_KEY is set it answers intelligently
   // with live rate/price tools and conversation memory.
   // Returns null when no API key is configured → fall back to pattern matching.
-  const aiReply = await askPajero(msg.text, msg.chat.id).catch(() => null);
+  const aiReply = await askPajero(cleanText, msg.chat.id).catch(() => null);
   if (aiReply) {
     await bot.sendMessage(msg.chat.id, aiReply, { parse_mode: "Markdown" });
     return;
   }
 
   // Fallback: regex pattern matching (always works, no API key needed)
-  await pajeroHandle(bot, msg);
+  await pajeroHandle(bot, { ...msg, text: cleanText });
 });
 
 // ─── Polling error handler ────────────────────────────────────────────────────

@@ -238,7 +238,12 @@ async function handleUnknown(bot, msg) {
 
 /**
  * Processes a plain-text message and dispatches to the right handler.
- * Returns true if an intent was matched, false if the message should be ignored.
+ *
+ * Expects msg.text to already be stripped of any @botname prefix (index.js
+ * handles that before calling here). Group gating (isBotAddressed) is also
+ * done upstream — this function always responds when called.
+ *
+ * Returns true if an intent was matched.
  */
 async function handleMessage(bot, msg) {
   if (!msg.text || msg.text.startsWith("/")) return false;
@@ -262,16 +267,9 @@ async function handleMessage(bot, msg) {
     }
   }
 
-  // No intent matched — only respond if the message mentions "pajero" or is a DM
-  const mentionsPajero = /pajero/i.test(text);
-  const isPrivateChat  = msg.chat.type === "private";
-
-  if (mentionsPajero || isPrivateChat) {
-    await handleUnknown(bot, msg);
-    return true;
-  }
-
-  return false;
+  // No intent matched — still respond (caller already confirmed bot is addressed)
+  await handleUnknown(bot, msg);
+  return true;
 }
 
 module.exports = { handleMessage };
