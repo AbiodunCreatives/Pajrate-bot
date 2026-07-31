@@ -117,14 +117,9 @@ bot.setMyCommands([
 bot.onText(/^\/start(@\w+)?$/i, (msg) => {
   trackUser(msg.chat.id, msg.from?.username);
   const message =
-    `👋 Welcome to *PajRate\\!*\n\n` +
-    `Live PAJ rates\\. Convert NGN ↔ crypto\\. Buy USDC with a bank transfer — straight to your Solana wallet\\.\n\n` +
-    `/rate — live buy & sell rate\n` +
-    `/convert 50000 — see what your Naira gets\n` +
-    `/buyusdc — turn Naira into USDC right now\n` +
-    `/alert SOL above 150 — get pinged when prices move\n` +
-    `/help — everything else\n\n` +
-    `_Just talk to me — no commands needed\\._`;
+    `👋 Hey\\! I'm *Pajero*, your PAJ assistant\\.\n\n` +
+    `Ask me anything — rates, conversions, buying USDC, price alerts\\.\n` +
+    `Or tap /help to explore\\.`;
 
   bot.sendMessage(msg.chat.id, message, { parse_mode: "MarkdownV2" });
 });
