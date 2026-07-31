@@ -10,7 +10,7 @@ const { addPajAlert, addTokenAlert, removeAlert, listAlerts,
         formatAlertLine, checkAlerts }                                    = require("./alerts");
 const { formatNgn, formatUsd }                                            = require("./rateUtils");
 const { upsertUser, readUsers, getWalletAddress, setWalletAddress }       = require("./store");
-const { scheduleBroadcast }                                               = require("./broadcast");
+const { scheduleBroadcast, sendBroadcast }                                = require("./broadcast");
 const { handleMessage: pajeroHandle }                                     = require("./pajero");
 const { handleBuyUsdcCommand,
         handleBuyUsdcCallback,
@@ -351,6 +351,50 @@ bot.onText(/^\/stats(@\w+)?$/i, async (msg) => {
     msg.chat.id,
     `📊 *Bot Stats*\n\n👤 Total users: ${getTotalUsers()}`,
     { parse_mode: "Markdown" }
+  );
+});
+
+// ─── /announce <message> (admin only) ────────────────────────────────────────
+// Broadcasts a plain-text message to every user who has ever interacted
+// with the bot. Restricted to ADMIN_CHAT_ID.
+//
+// Usage:
+//   /announce PAJ rates are now live — come check the new features!
+//
+// Multi-line: just send the command with the full message body.
+
+bot.onText(/^\/announce(@\w+)?(?:\s+([\s\S]+))?$/i, async (msg, match) => {
+  const chatId = String(msg.chat.id);
+
+  // Admin guard
+  if (!ADMIN_CHAT_ID || chatId !== ADMIN_CHAT_ID) {
+    await bot.sendMessage(msg.chat.id, `⚠️ This command is restricted.`);
+    return;
+  }
+
+  const text = (match[2] ?? "").trim();
+  if (!text) {
+    await bot.sendMessage(
+      msg.chat.id,
+      `📣 *Usage:*\n\n\`/announce Your message here\`\n\nEverything after /announce is sent to all ${getTotalUsers()} known users.`,
+      { parse_mode: "Markdown" }
+    );
+    return;
+  }
+
+  const totalUsers = getTotalUsers();
+  await bot.sendMessage(
+    msg.chat.id,
+    `📣 Broadcasting to *${totalUsers}* user(s)\\.\\.\\. stand by\\.`,
+    { parse_mode: "MarkdownV2" }
+  );
+
+  const { sent, failed } = await sendBroadcast(bot, text, { parse_mode: "Markdown" });
+
+  await bot.sendMessage(
+    msg.chat.id,
+    `✅ *Broadcast complete\\!*\n\n✔️ Delivered: *${sent}*\n❌ Failed: *${failed}*`,
+    { parse_mode: "MarkdownV2" }
   );
 });
 

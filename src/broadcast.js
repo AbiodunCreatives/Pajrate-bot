@@ -94,4 +94,41 @@ function scheduleBroadcast(bot) {
   }, BROADCAST_DELAY_MS);
 }
 
-module.exports = { scheduleBroadcast };
+/**
+ * Sends an arbitrary message to every known user immediately.
+ * Used by the /announce admin command.
+ *
+ * @param {TelegramBot} bot
+ * @param {string} text   Plain text or MarkdownV2 — caller decides parse_mode
+ * @param {object} [opts] Extra sendMessage options (e.g. { parse_mode: "Markdown" })
+ * @returns {Promise<{ sent: number, failed: number }>}
+ */
+async function sendBroadcast(bot, text, opts = {}) {
+  const users = readUsers();
+
+  if (!users.length) {
+    console.log("[broadcast] No users to notify.");
+    return { sent: 0, failed: 0 };
+  }
+
+  console.log(`[broadcast] Sending to ${users.length} user(s)...`);
+  let sent = 0;
+  let failed = 0;
+
+  for (const user of users) {
+    try {
+      await bot.sendMessage(user.chatId, text, opts);
+      sent++;
+    } catch (err) {
+      console.warn(`[broadcast] Couldn't reach ${user.chatId}: ${err.message}`);
+      failed++;
+    }
+    // ~20 msgs/s — safe under Telegram's rate limit
+    await new Promise((res) => setTimeout(res, MSG_INTERVAL_MS));
+  }
+
+  console.log(`[broadcast] Done. Sent: ${sent}, failed: ${failed}.`);
+  return { sent, failed };
+}
+
+module.exports = { scheduleBroadcast, sendBroadcast };
