@@ -17,6 +17,7 @@
 "use strict";
 
 const { createClient } = require("@supabase/supabase-js");
+const ws               = require("ws");
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
 
@@ -31,7 +32,8 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
+  auth:      { persistSession: false },
+  realtime:  { transport: ws },
 });
 
 // ─── Rounding helpers ─────────────────────────────────────────────────────────
