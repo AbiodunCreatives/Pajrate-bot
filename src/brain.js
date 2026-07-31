@@ -195,7 +195,7 @@ async function askPajero(question, chatId) {
 
     const groq = createGroq({ apiKey });
     const { text } = await generateText({
-      model:           groq("llama-3.3-70b-versatile"),
+      model:           groq("llama-3.1-8b-instant"),
       system:          SYSTEM_PROMPT,
       messages,
       tools:           buildTools(chatId),
