@@ -118,8 +118,7 @@ bot.onText(/^\/start(@\w+)?$/i, (msg) => {
   trackUser(msg.chat.id, msg.from?.username);
   const message =
     `👋 Hey\\! I'm *Pajero*, your PAJ assistant\\.\n\n` +
-    `Ask me anything — rates, conversions, buying USDC, price alerts\\.\n` +
-    `Or tap /help to explore\\.`;
+    `Ask me anything — rates, conversions, buying USDC, price alerts\\. Or tap /help to explore\\.`;
 
   bot.sendMessage(msg.chat.id, message, { parse_mode: "MarkdownV2" });
 });
