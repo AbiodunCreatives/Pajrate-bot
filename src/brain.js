@@ -20,7 +20,7 @@ const { z }                                = require("zod");
 const { getRate }             = require("./rateSource");
 const { getTokenPricesUsd }   = require("./tokenPrices");
 const { listRecentOnramps }   = require("./db");
-const { getWalletAddress }    = require("./db");
+
 
 // ─── In-process conversation history ─────────────────────────────────────────
 // Map<chatId, { messages: array, updatedAt: number }>
@@ -71,13 +71,10 @@ WHAT THIS BOT DOES:
 - Live PAJ Cash NGN buy/sell rates for USDC (/rate)
 - Convert NGN ↔ USDT/USDC/SOL/JUP/BONK/ANSEM/PENGU/SKR (/convert)
 - One-time price alerts for tokens (USD) or PAJ rates (NGN) (/alert)
-- Buy USDC via Nigerian bank transfer, delivered to Solana wallet (/buyusdc)
-- Set Solana wallet address (/setwallet)
 
 KEY FACTS:
 - Buy rate = NGN per $1 USDC (onramp). Sell rate = NGN per $1 USDC (offramp, slightly lower).
 - Token prices from CoinGecko, refreshed every 30s.
-- Buy USDC limits: min ₦1,000, max ₦20,000. Set wallet first with /setwallet.
 - Alerts fire once then are removed. /alerts to list, /removealert <id> to cancel.
 - For failed deposits or missing USDC: tell user to ping @bioduncrypt with their order reference.
 
@@ -161,16 +158,6 @@ function buildTools(chatId) {
       },
     }),
 
-    getUserWallet: tool({
-      description: "Get the Solana wallet address the user has registered for USDC delivery",
-      parameters: z.object({ _: z.string().optional() }),
-      execute: async () => {
-        const address = await getWalletAddress(chatId);
-        return address
-          ? { wallet_address: address }
-          : { wallet_address: null, message: "No wallet set. Use /setwallet <address>." };
-      },
-    }),
   };
 }
 

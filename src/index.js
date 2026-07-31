@@ -15,9 +15,7 @@ const { readAlerts, writeAlerts,
         isBroadcastSent, markBroadcastSent }                              = require("./store");
 const { scheduleBroadcast, sendBroadcast }                                = require("./broadcast");
 const { handleMessage: pajeroHandle }                                     = require("./pajero");
-const { handleBuyUsdcCommand,
-        handleBuyUsdcCallback,
-        handleBuyUsdcText }                                               = require("./buyUsdc");
+
 const { reconcileWebhook,
         getWebhookSecret,
         isPajCashCompleted }                                               = require("./pajcash");
@@ -103,8 +101,6 @@ console.log("PAJ Rate bot starting...");
 bot.setMyCommands([
   { command: "rate",         description: "Get live PAJ buy & sell rates" },
   { command: "convert",      description: "Convert between NGN and crypto" },
-  { command: "buyusdc",      description: "Buy USDC with Naira via bank transfer" },
-  { command: "setwallet",    description: "Set your Solana wallet address for USDC delivery" },
   { command: "alert",        description: "Set a price alert" },
   { command: "alerts",       description: "View your active alerts" },
   { command: "removealert",  description: "Remove an alert by ID" },
@@ -118,7 +114,7 @@ bot.onText(/^\/start(@\w+)?$/i, (msg) => {
   trackUser(msg.chat.id, msg.from?.username);
   const message =
     `👋 Hey\\! I'm *Pajero*, your PAJ assistant\\.\n\n` +
-    `Ask me anything — rates, conversions, buying USDC, price alerts\\. Or tap /help to explore\\.`;
+    `Ask me anything — rates, conversions, price alerts\\. Or tap /help to explore\\.`;
 
   bot.sendMessage(msg.chat.id, message, { parse_mode: "MarkdownV2" });
 });
@@ -127,36 +123,17 @@ bot.onText(/^\/start(@\w+)?$/i, (msg) => {
 
 bot.onText(/^\/help(@\w+)?$/i, (msg) => {
   const message =
-    `ℹ️ *PajRate — Command Guide*\n\n` +
-    `💱 /rate\n` +
-    `Get the live PAJ buy & sell rate right now\\.\n\n` +
-    `🔄 /convert <amount> \\[unit\\]\n` +
-    `Convert between Naira and crypto at the live rate\\.\n` +
-    `  • /convert 50000 → how much USDT ₦50,000 buys\n` +
-    `  • /convert 25 USDT → how much NGN 25 USDT sells for\n` +
-    `  • /convert 5 SOL → how much NGN 5 SOL is worth\n` +
-    `  • /convert 100 JUP → how much NGN 100 JUP is worth\n` +
-    `  • /convert 1000000 BONK → how much NGN 1M BONK is worth\n` +
-    `  • /convert 500 ANSEM → how much NGN 500 ANSEM is worth\n` +
-    `  • /convert 200 PENGU → how much NGN 200 PENGU is worth\n` +
-    `  • /convert 1000 SKR → how much NGN 1,000 SKR is worth\n\n` +
-    `_Supported: NGN, USDT, USDC, USD, SOL, JUP, BONK, ANSEM, PENGU, SKR_\n\n` +
-    `🔔 /alert <token> <above|below> <price>\n` +
-    `🔔 /alert <buy|sell> <above|below> <price>\n` +
-    `Get a one\\-time ping when a price crosses your target\\.\n` +
-    `  • /alert SOL above 150 → ping when SOL > \\$150\n` +
-    `  • /alert BONK below 0\\.00003 → ping when BONK drops\n` +
-    `  • /alert buy above 1650 → ping when PAJ buy rate > ₦1,650\n` +
-    `  • /alert sell below 1500 → ping when PAJ sell rate < ₦1,500\n\n` +
-    `📋 /alerts — List your active price alerts\n\n` +
-    `❌ /removealert <id> — Cancel an alert by ID\n\n` +
-    `💵 /buyusdc \\[amount\\] — Buy USDC with Naira via bank transfer\n` +
-    `  • /buyusdc → pick a preset amount\n` +
-    `  • /buyusdc 5000 → create a ₦5,000 order directly\n\n` +
-    `💳 /setwallet <address> — Set your Solana wallet for USDC delivery\n\n` +
-    `_PAJ rates are fetched live\\. Token prices refresh every 30s via CoinGecko\\._`;
+    `*PajRate — Commands*\n\n` +
+    `• /rate — live buy & sell rate\n` +
+    `• /convert 50000 — NGN → USDT\n` +
+    `• /convert 5 SOL — SOL → NGN\n` +
+    `• /alert SOL above 150 — price alert\n` +
+    `• /alert buy above 1650 — PAJ rate alert\n` +
+    `• /alerts — your active alerts\n` +
+    `• /removealert <id> — cancel an alert\n\n` +
+    `_Tokens: SOL, JUP, BONK, ANSEM, PENGU, SKR, USDT, USDC_`;
 
-  bot.sendMessage(msg.chat.id, message, { parse_mode: "MarkdownV2" });
+  bot.sendMessage(msg.chat.id, message, { parse_mode: "Markdown" });
 });
 
 // ─── /rate ────────────────────────────────────────────────────────────────────
@@ -169,10 +146,7 @@ bot.onText(/^\/rate(@\w+)?$/i, async (msg) => {
     await bot.sendMessage(chatId, formatRateMessage(rateData), { parse_mode: "Markdown" });
   } catch (err) {
     console.error("Error handling /rate:", err.message);
-    await bot.sendMessage(
-      chatId,
-      `⚠️ Couldn't fetch the live rate right now.\nPlease try again in a moment — PAJ's servers may be temporarily unavailable.`
-    );
+    await bot.sendMessage(chatId, `⚠️ Couldn't fetch the rate right now. Try again in a moment.`);
   }
 });
 
@@ -182,7 +156,7 @@ bot.onText(/^\/rate(@\w+)?$/i, async (msg) => {
 bot.onText(/^\/convert(@\w+)?$/i, async (msg) => {
   await bot.sendMessage(
     msg.chat.id,
-    `🔄 *Convert*\n\nUsage: \`/convert <amount> [unit]\`\n\nExamples:\n  • \`/convert 50000\` — NGN → USDT\n  • \`/convert 25 USDT\` — USDT → NGN\n  • \`/convert 5 SOL\` — SOL → NGN\n  • \`/convert 100 JUP\` — JUP → NGN\n  • \`/convert 1000000 BONK\` — BONK → NGN\n  • \`/convert 500 ANSEM\` — ANSEM → NGN\n  • \`/convert 200 PENGU\` — PENGU → NGN\n  • \`/convert 1000 SKR\` — SKR → NGN`,
+    `Usage: \`/convert <amount> [unit]\`\n\n• \`/convert 50000\` — NGN → USDT\n• \`/convert 25 USDT\` — USDT → NGN\n• \`/convert 5 SOL\` — SOL → NGN`,
     { parse_mode: "Markdown" }
   );
 });
@@ -286,17 +260,9 @@ bot.onText(/^\/alert(\s.*)?$/i, async (msg) => {
   await bot.sendMessage(
     msg.chat.id,
     `🔔 *Price Alerts*\n\n` +
-    `*Token alerts* \\(USD price\\):\n` +
-    `  • \`/alert SOL above 150\`\n` +
-    `  • \`/alert BONK below 0\\.00003\`\n` +
-    `  • \`/alert JUP above 1\\.50\`\n` +
-    `  • \`/alert ANSEM above 0\\.10\`\n` +
-    `  • \`/alert PENGU above 0\\.05\`\n` +
-    `  • \`/alert SKR above 0\\.10\`\n\n` +
-    `*PAJ rate alerts* \\(NGN\\):\n` +
-    `  • \`/alert buy above 1650\`\n` +
-    `  • \`/alert sell below 1500\``,
-    { parse_mode: "MarkdownV2" }
+    `Token (USD):\n• \`/alert SOL above 150\`\n• \`/alert BONK below 0.00003\`\n\n` +
+    `PAJ rate (NGN):\n• \`/alert buy above 1650\`\n• \`/alert sell below 1500\``,
+    { parse_mode: "Markdown" }
   );
 });
 
@@ -307,20 +273,12 @@ bot.onText(/^\/alerts(@\w+)?$/i, async (msg) => {
   const alerts = listAlerts(chatId);
 
   if (!alerts.length) {
-    await bot.sendMessage(
-      chatId,
-      `📭 *No active alerts.*\n\nSet one:\n  • \`/alert SOL above 150\` — ping when SOL > $150\n  • \`/alert buy above 1650\` — ping when buy rate > ₦1,650`,
-      { parse_mode: "Markdown" }
-    );
+    await bot.sendMessage(chatId, `📭 No active alerts.\n\nTry: \`/alert SOL above 150\``, { parse_mode: "Markdown" });
     return;
   }
 
-  const lines = alerts.map((a) => `  ${formatAlertLine(a)}`);
-  await bot.sendMessage(
-    chatId,
-    `📋 *Your Active Alerts*\n\n${lines.join("\n")}\n\nRemove one: \`/removealert <id>\``,
-    { parse_mode: "Markdown" }
-  );
+  const lines = alerts.map((a) => `• ${formatAlertLine(a)}`);
+  await bot.sendMessage(chatId, `📋 *Active Alerts*\n\n${lines.join("\n")}`, { parse_mode: "Markdown" });
 });
 
 // ─── /removealert ─────────────────────────────────────────────────────────────
@@ -416,56 +374,24 @@ bot.onText(/^\/setwallet(@\w+)?(\s+\S+)?$/i, async (msg, match) => {
     const current = await getWalletAddress(chatId);
     await bot.sendMessage(
       chatId,
-      `💳 *Your Solana Wallet*\n\n` +
-      (current
-        ? `Current address:\n\`${current}\`\n\nTo update it:\n\`/setwallet <new address>\``
-        : `No address set yet.\n\nUsage:\n\`/setwallet <solana address>\`\n\nExample:\n\`/setwallet 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\``),
+      current
+        ? `💳 *Your wallet:*\n\`${current}\`\n\nTo update: \`/setwallet <new address>\``
+        : `💳 No wallet set.\n\nUsage: \`/setwallet <solana address>\``,
       { parse_mode: "Markdown" }
     );
     return;
   }
 
-  // Basic Solana base58 length check (32–44 chars)
   if (address.length < 32 || address.length > 44) {
-    await bot.sendMessage(chatId,
-      `⚠️ That doesn't look like a valid Solana address.\n\nAddresses are 32–44 characters long.\nExample:\n\`/setwallet 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\``,
-      { parse_mode: "Markdown" }
-    );
+    await bot.sendMessage(chatId, `⚠️ Invalid Solana address. Must be 32–44 characters.`);
     return;
   }
 
   await setWalletAddress(chatId, address);
-  await bot.sendMessage(chatId,
-    `✅ *Wallet saved\\!*\n\n\`${address}\`\n\nAll future buy\\-USDC orders will deliver to this address\\.`,
-    { parse_mode: "MarkdownV2" }
-  );
+  await bot.sendMessage(chatId, `✅ Wallet saved:\n\`${address}\``, { parse_mode: "Markdown" });
 });
 
 // ─── /buyusdc ─────────────────────────────────────────────────────────────────
-
-bot.onText(/^\/buyusdc(@\w+)?(\s+.*)?$/i, async (msg) => {
-  trackUser(msg.chat.id, msg.from?.username);
-  await handleBuyUsdcCommand(bot, msg, (userId) => getWalletAddress(userId));
-});
-
-// ─── Callback queries (buy-USDC inline buttons) ───────────────────────────────
-
-bot.on("callback_query", async (query) => {
-  const data = query.data ?? "";
-  if (!data.startsWith("buy:")) return;
-
-  try {
-    const handled = await handleBuyUsdcCallback(
-      bot,
-      query,
-      (userId) => getWalletAddress(userId)
-    );
-    if (handled) await bot.answerCallbackQuery(query.id).catch(() => null);
-  } catch (err) {
-    console.error("[buyusdc] callback error:", err.message);
-    await bot.answerCallbackQuery(query.id, { text: "Something went wrong. Try again." }).catch(() => null);
-  }
-});
 
 bot.on("message", async (msg) => {
   if (!msg.text || msg.text.startsWith("/")) return;
@@ -476,14 +402,6 @@ bot.on("message", async (msg) => {
 
   // Strip "@BotName" prefix so the AI / intent matcher sees clean input
   const cleanText = stripBotMention(msg.text);
-
-  // Buy-USDC custom amount entry takes priority over everything
-  const handled = await handleBuyUsdcText(
-    bot,
-    msg,
-    (userId) => getWalletAddress(userId)
-  );
-  if (handled) return;
 
   // Try AI brain first — if GROQ_API_KEY is set it answers intelligently
   // with live rate/price tools and conversation memory.
