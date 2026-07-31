@@ -124,4 +124,39 @@ function upsertUser({ chatId, username }) {
   writeUsers(users);
 }
 
-module.exports = { readAlerts, writeAlerts, readUsers, writeUsers, upsertUser, readMeta, writeMeta, isBroadcastSent, markBroadcastSent };
+// ─── Wallet addresses ─────────────────────────────────────────────────────────
+
+/**
+ * Returns the stored Solana wallet address for a user, or null.
+ * @param {number|string} chatId
+ * @returns {string|null}
+ */
+function getWalletAddress(chatId) {
+  const users = readUsers();
+  const user  = users.find((u) => u.chatId === String(chatId));
+  return user?.walletAddress ?? null;
+}
+
+/**
+ * Persists a Solana wallet address for a user.
+ * @param {number|string} chatId
+ * @param {string} address
+ */
+function setWalletAddress(chatId, address) {
+  const users = readUsers();
+  const id    = String(chatId);
+  const idx   = users.findIndex((u) => u.chatId === id);
+  if (idx === -1) {
+    users.push({ chatId: id, username: null, firstSeen: new Date().toISOString(), walletAddress: address });
+  } else {
+    users[idx].walletAddress = address;
+  }
+  writeUsers(users);
+}
+
+module.exports = {
+  readAlerts, writeAlerts,
+  readUsers, writeUsers, upsertUser,
+  readMeta, writeMeta, isBroadcastSent, markBroadcastSent,
+  getWalletAddress, setWalletAddress,
+};

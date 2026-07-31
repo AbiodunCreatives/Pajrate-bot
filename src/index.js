@@ -9,9 +9,15 @@ const { convert }                                                         = requ
 const { addPajAlert, addTokenAlert, removeAlert, listAlerts,
         formatAlertLine, checkAlerts }                                    = require("./alerts");
 const { formatNgn, formatUsd }                                            = require("./rateUtils");
-const { upsertUser, readUsers }                                           = require("./store");
+const { upsertUser, readUsers, getWalletAddress, setWalletAddress }       = require("./store");
 const { scheduleBroadcast }                                               = require("./broadcast");
 const { handleMessage: pajeroHandle }                                     = require("./pajero");
+const { handleBuyUsdcCommand,
+        handleBuyUsdcCallback,
+        handleBuyUsdcText }                                               = require("./buyUsdc");
+const { reconcileWebhook,
+        getWebhookSecret,
+        isPajCashCompleted }                                               = require("./pajcash");
 
 const BOT_TOKEN     = process.env.TELEGRAM_BOT_TOKEN;
 const CHANNEL_ID    = process.env.TELEGRAM_CHANNEL_ID;
@@ -37,6 +43,8 @@ console.log("PAJ Rate bot starting...");
 bot.setMyCommands([
   { command: "rate",         description: "Get live PAJ buy & sell rates" },
   { command: "convert",      description: "Convert between NGN and crypto" },
+  { command: "buyusdc",      description: "Buy USDC with Naira via bank transfer" },
+  { command: "setwallet",    description: "Set your Solana wallet address for USDC delivery" },
   { command: "alert",        description: "Set a price alert" },
   { command: "alerts",       description: "View your active alerts" },
   { command: "removealert",  description: "Remove an alert by ID" },
@@ -84,6 +92,10 @@ bot.onText(/^\/help(@\w+)?$/i, (msg) => {
     `  • /alert sell below 1500 → ping when PAJ sell rate < ₦1,500\n\n` +
     `📋 /alerts — List your active price alerts\n\n` +
     `❌ /removealert <id> — Cancel an alert by ID\n\n` +
+    `💵 /buyusdc \\[amount\\] — Buy USDC with Naira via bank transfer\n` +
+    `  • /buyusdc → pick a preset amount\n` +
+    `  • /buyusdc 5000 → create a ₦5,000 order directly\n\n` +
+    `💳 /setwallet <address> — Set your Solana wallet for USDC delivery\n\n` +
     `_PAJ rates are fetched live\\. Token prices refresh every 30s via CoinGecko\\._`;
 
   bot.sendMessage(msg.chat.id, message, { parse_mode: "MarkdownV2" });
@@ -290,9 +302,81 @@ bot.onText(/^\/stats(@\w+)?$/i, async (msg) => {
 // In private chats: responds to everything not a command.
 // In groups: only responds when message matches a known intent or mentions "pajero".
 
+// ─── /setwallet ───────────────────────────────────────────────────────────────
+// Lets users register the Solana address that receives USDC from onramp orders.
+
+bot.onText(/^\/setwallet(@\w+)?(\s+\S+)?$/i, async (msg, match) => {
+  const chatId  = msg.chat.id;
+  const address = (match[2] ?? "").trim();
+  trackUser(chatId, msg.from?.username);
+
+  if (!address) {
+    const current = getWalletAddress(chatId);
+    await bot.sendMessage(
+      chatId,
+      `💳 *Your Solana Wallet*\n\n` +
+      (current
+        ? `Current address:\n\`${current}\`\n\nTo update it:\n\`/setwallet <new address>\``
+        : `No address set yet.\n\nUsage:\n\`/setwallet <solana address>\`\n\nExample:\n\`/setwallet 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\``),
+      { parse_mode: "Markdown" }
+    );
+    return;
+  }
+
+  // Basic Solana base58 length check (32–44 chars)
+  if (address.length < 32 || address.length > 44) {
+    await bot.sendMessage(chatId,
+      `⚠️ That doesn't look like a valid Solana address.\n\nAddresses are 32–44 characters long.\nExample:\n\`/setwallet 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU\``,
+      { parse_mode: "Markdown" }
+    );
+    return;
+  }
+
+  setWalletAddress(chatId, address);
+  await bot.sendMessage(chatId,
+    `✅ *Wallet saved\\!*\n\n\`${address}\`\n\nAll future buy\\-USDC orders will deliver to this address\\.`,
+    { parse_mode: "MarkdownV2" }
+  );
+});
+
+// ─── /buyusdc ─────────────────────────────────────────────────────────────────
+
+bot.onText(/^\/buyusdc(@\w+)?(\s+.*)?$/i, async (msg) => {
+  trackUser(msg.chat.id, msg.from?.username);
+  await handleBuyUsdcCommand(bot, msg, (userId) => Promise.resolve(getWalletAddress(userId)));
+});
+
+// ─── Callback queries (buy-USDC inline buttons) ───────────────────────────────
+
+bot.on("callback_query", async (query) => {
+  const data = query.data ?? "";
+  if (!data.startsWith("buy:")) return;
+
+  try {
+    const handled = await handleBuyUsdcCallback(
+      bot,
+      query,
+      (userId) => Promise.resolve(getWalletAddress(userId))
+    );
+    if (handled) await bot.answerCallbackQuery(query.id).catch(() => null);
+  } catch (err) {
+    console.error("[buyusdc] callback error:", err.message);
+    await bot.answerCallbackQuery(query.id, { text: "Something went wrong. Try again." }).catch(() => null);
+  }
+});
+
 bot.on("message", async (msg) => {
   if (!msg.text || msg.text.startsWith("/")) return;
   trackUser(msg.chat.id, msg.from?.username);
+
+  // Buy-USDC custom amount entry takes priority over Pajero
+  const handled = await handleBuyUsdcText(
+    bot,
+    msg,
+    (userId) => Promise.resolve(getWalletAddress(userId))
+  );
+  if (handled) return;
+
   await pajeroHandle(bot, msg);
 });
 
@@ -338,7 +422,50 @@ if (CHANNEL_ID) {
 // ─── Health check server (for Fly.io) ────────────────────────────────────────
 
 const app = express();
+app.use(express.json({ limit: "100kb" }));
+
 app.get("/", (_req, res) => res.send("PAJ rate bot is running."));
+
+// ─── PajCash webhook ──────────────────────────────────────────────────────────
+// PajCash POSTs here when an onramp order changes status (PAID, COMPLETED, etc.).
+// Secret in the URL path protects against random callers.
+
+app.post("/webhook/pajcash/:secret", async (req, res) => {
+  // Validate path secret
+  let expectedSecret;
+  try { expectedSecret = getWebhookSecret(); }
+  catch { return res.status(500).json({ error: "Webhook not configured." }); }
+
+  if (req.params.secret !== expectedSecret) {
+    return res.status(403).json({ error: "Forbidden." });
+  }
+
+  // Acknowledge immediately — PajCash expects a fast 2xx
+  res.status(200).json({ ok: true });
+
+  try {
+    const record = await reconcileWebhook(req.body);
+    if (!record) return; // not an onramp we care about
+
+    // Notify the user if the order completed
+    if (isPajCashCompleted(record.status) && record.telegram_id) {
+      const amt = record.actual_usdc_amount > 0
+        ? record.actual_usdc_amount
+        : record.expected_usdc_amount;
+      const usdcStr = `${(Math.round((amt + Number.EPSILON) * 1_000_000) / 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} USDC`;
+      await bot.sendMessage(
+        record.telegram_id,
+        `✅ *Top-up complete\\!*\n\n` +
+        `\`${usdcStr}\` has been sent to your wallet\\.\n\n` +
+        `Reference: \`${record.order_id}\``,
+        { parse_mode: "MarkdownV2" }
+      ).catch((err) => console.warn("[pajcash webhook] Failed to notify user:", err.message));
+    }
+  } catch (err) {
+    console.error("[pajcash webhook] reconcile error:", err.message);
+  }
+});
+
 app.listen(PORT, () => console.log(`Health check server on port ${PORT}`));
 
 // ─── One-time new-features broadcast (fires 3 hours after first deploy) ───────
