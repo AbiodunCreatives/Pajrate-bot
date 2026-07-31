@@ -494,7 +494,7 @@ bot.on("message", async (msg) => {
     return null;
   });
   if (aiReply) {
-    await bot.sendMessage(msg.chat.id, aiReply, { parse_mode: "Markdown" });
+    await bot.sendMessage(msg.chat.id, aiReply);
     return;
   }
 

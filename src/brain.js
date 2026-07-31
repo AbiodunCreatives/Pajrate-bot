@@ -13,7 +13,7 @@
 
 "use strict";
 
-const { generateText, tool, stepCountIs } = require("ai");
+const { generateText, tool } = require("ai");
 const { createGroq }                       = require("@ai-sdk/groq");
 const { z }                                = require("zod");
 
@@ -333,8 +333,8 @@ async function askPajero(question, chatId) {
       system:          SYSTEM_PROMPT,
       messages,
       tools:           buildTools(chatId),
-      stopWhen:        stepCountIs(5),
-      maxOutputTokens: 300,
+      maxSteps:        5,
+      maxTokens:       300,
     });
 
     const reply = text.trim() || FALLBACK;
