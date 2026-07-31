@@ -230,10 +230,132 @@ async function upsertOnrampStatus(input) {
   return normalizeRow(data);
 }
 
+// ─── bot_users ────────────────────────────────────────────────────────────────
+
+const USERS_TABLE = "bot_users";
+
+/**
+ * Insert or update a user record.
+ * Updates username and last_seen on every call.
+ *
+ * @param {{ chatId: number|string, username?: string }} user
+ */
+async function upsertUser({ chatId, username }) {
+  const id  = String(chatId);
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from(USERS_TABLE)
+    .upsert(
+      {
+        chat_id:   id,
+        username:  username || null,
+        last_seen: now,
+      },
+      {
+        onConflict:        "chat_id",
+        ignoreDuplicates:  false,
+      }
+    );
+
+  if (error) {
+    // Non-fatal — log and continue so the bot keeps running
+    console.warn("[db] upsertUser error:", error.message);
+  }
+}
+
+/**
+ * Returns all users as an array of plain objects.
+ * @returns {Promise<Array<{ chatId: string, username: string|null, firstSeen: string, lastSeen: string, walletAddress: string|null }>>}
+ */
+async function readUsers() {
+  const { data, error } = await supabase
+    .from(USERS_TABLE)
+    .select("chat_id, username, first_seen, last_seen, wallet_address")
+    .order("first_seen", { ascending: true });
+
+  if (error) {
+    console.warn("[db] readUsers error:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => ({
+    chatId:        row.chat_id,
+    username:      row.username,
+    firstSeen:     row.first_seen,
+    lastSeen:      row.last_seen,
+    walletAddress: row.wallet_address,
+  }));
+}
+
+/**
+ * Returns the total number of users.
+ * @returns {Promise<number>}
+ */
+async function getUserCount() {
+  const { count, error } = await supabase
+    .from(USERS_TABLE)
+    .select("*", { count: "exact", head: true });
+
+  if (error) {
+    console.warn("[db] getUserCount error:", error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Returns the stored Solana wallet address for a user, or null.
+ * @param {number|string} chatId
+ * @returns {Promise<string|null>}
+ */
+async function getWalletAddress(chatId) {
+  const { data, error } = await supabase
+    .from(USERS_TABLE)
+    .select("wallet_address")
+    .eq("chat_id", String(chatId))
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[db] getWalletAddress error:", error.message);
+    return null;
+  }
+
+  return data?.wallet_address ?? null;
+}
+
+/**
+ * Persists a Solana wallet address for a user.
+ * @param {number|string} chatId
+ * @param {string} address
+ */
+async function setWalletAddress(chatId, address) {
+  const id  = String(chatId);
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from(USERS_TABLE)
+    .upsert(
+      { chat_id: id, wallet_address: address, last_seen: now },
+      { onConflict: "chat_id", ignoreDuplicates: false }
+    );
+
+  if (error) {
+    console.warn("[db] setWalletAddress error:", error.message);
+  }
+}
+
 module.exports = {
   supabase,
   createOnrampRecord,
   getOnrampByOrderId,
   listRecentOnramps,
   upsertOnrampStatus,
+  // bot_users
+  upsertUser,
+  readUsers,
+  getUserCount,
+  getWalletAddress,
+  setWalletAddress,
 };

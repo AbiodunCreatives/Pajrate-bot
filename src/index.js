@@ -9,7 +9,10 @@ const { convert }                                                         = requ
 const { addPajAlert, addTokenAlert, removeAlert, listAlerts,
         formatAlertLine, checkAlerts }                                    = require("./alerts");
 const { formatNgn, formatUsd }                                            = require("./rateUtils");
-const { upsertUser, readUsers, getWalletAddress, setWalletAddress }       = require("./store");
+const { upsertUser, readUsers, getUserCount, getWalletAddress, setWalletAddress } = require("./db");
+const { readAlerts, writeAlerts,
+        readMeta, writeMeta,
+        isBroadcastSent, markBroadcastSent }                              = require("./store");
 const { scheduleBroadcast, sendBroadcast }                                = require("./broadcast");
 const { handleMessage: pajeroHandle }                                     = require("./pajero");
 const { handleBuyUsdcCommand,
@@ -35,7 +38,7 @@ const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
 // Persistent user tracking
 const trackUser     = (chatId, username) => upsertUser({ chatId, username });
-const getTotalUsers = () => readUsers().length;
+const getTotalUsers = ()                 => getUserCount();
 
 // ─── Bot identity (resolved after startup) ────────────────────────────────────
 let BOT_USERNAME = ""; // e.g. "PajRate_bot"
@@ -349,7 +352,7 @@ bot.onText(/^\/stats(@\w+)?$/i, async (msg) => {
 
   await bot.sendMessage(
     msg.chat.id,
-    `📊 *Bot Stats*\n\n👤 Total users: ${getTotalUsers()}`,
+    `📊 *Bot Stats*\n\n👤 Total users: ${await getTotalUsers()}`,
     { parse_mode: "Markdown" }
   );
 });
@@ -376,13 +379,13 @@ bot.onText(/^\/announce(@\w+)?(?:\s+([\s\S]+))?$/i, async (msg, match) => {
   if (!text) {
     await bot.sendMessage(
       msg.chat.id,
-      `📣 *Usage:*\n\n\`/announce Your message here\`\n\nEverything after /announce is sent to all ${getTotalUsers()} known users.`,
+      `📣 *Usage:*\n\n\`/announce Your message here\`\n\nEverything after /announce is sent to all ${await getTotalUsers()} known users.`,
       { parse_mode: "Markdown" }
     );
     return;
   }
 
-  const totalUsers = getTotalUsers();
+  const totalUsers = await getTotalUsers();
   await bot.sendMessage(
     msg.chat.id,
     `📣 Broadcasting to *${totalUsers}* user(s)\\.\\.\\. stand by\\.`,
@@ -412,7 +415,7 @@ bot.onText(/^\/setwallet(@\w+)?(\s+\S+)?$/i, async (msg, match) => {
   trackUser(chatId, msg.from?.username);
 
   if (!address) {
-    const current = getWalletAddress(chatId);
+    const current = await getWalletAddress(chatId);
     await bot.sendMessage(
       chatId,
       `💳 *Your Solana Wallet*\n\n` +
@@ -433,7 +436,7 @@ bot.onText(/^\/setwallet(@\w+)?(\s+\S+)?$/i, async (msg, match) => {
     return;
   }
 
-  setWalletAddress(chatId, address);
+  await setWalletAddress(chatId, address);
   await bot.sendMessage(chatId,
     `✅ *Wallet saved\\!*\n\n\`${address}\`\n\nAll future buy\\-USDC orders will deliver to this address\\.`,
     { parse_mode: "MarkdownV2" }
@@ -444,7 +447,7 @@ bot.onText(/^\/setwallet(@\w+)?(\s+\S+)?$/i, async (msg, match) => {
 
 bot.onText(/^\/buyusdc(@\w+)?(\s+.*)?$/i, async (msg) => {
   trackUser(msg.chat.id, msg.from?.username);
-  await handleBuyUsdcCommand(bot, msg, (userId) => Promise.resolve(getWalletAddress(userId)));
+  await handleBuyUsdcCommand(bot, msg, (userId) => getWalletAddress(userId));
 });
 
 // ─── Callback queries (buy-USDC inline buttons) ───────────────────────────────
@@ -457,7 +460,7 @@ bot.on("callback_query", async (query) => {
     const handled = await handleBuyUsdcCallback(
       bot,
       query,
-      (userId) => Promise.resolve(getWalletAddress(userId))
+      (userId) => getWalletAddress(userId)
     );
     if (handled) await bot.answerCallbackQuery(query.id).catch(() => null);
   } catch (err) {
@@ -480,7 +483,7 @@ bot.on("message", async (msg) => {
   const handled = await handleBuyUsdcText(
     bot,
     msg,
-    (userId) => Promise.resolve(getWalletAddress(userId))
+    (userId) => getWalletAddress(userId)
   );
   if (handled) return;
 

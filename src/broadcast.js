@@ -12,7 +12,8 @@
  * rate limit (~30 messages/second for bots).
  */
 
-const { readUsers, isBroadcastSent, markBroadcastSent } = require("./store");
+const { isBroadcastSent, markBroadcastSent } = require("./store");
+const { readUsers }                          = require("./db");
 
 // Unique ID for this broadcast — change this to re-send a future broadcast.
 const BROADCAST_ID    = "v3-features";
@@ -70,7 +71,7 @@ function scheduleBroadcast(bot) {
       return;
     }
 
-    const users = readUsers();
+    const users = await readUsers();
 
     if (!users.length) {
       console.log("Broadcast: no users to notify.");
@@ -104,7 +105,7 @@ function scheduleBroadcast(bot) {
  * @returns {Promise<{ sent: number, failed: number }>}
  */
 async function sendBroadcast(bot, text, opts = {}) {
-  const users = readUsers();
+  const users = await readUsers();
 
   if (!users.length) {
     console.log("[broadcast] No users to notify.");

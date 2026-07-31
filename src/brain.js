@@ -20,7 +20,7 @@ const { z }                                = require("zod");
 const { getRate }             = require("./rateSource");
 const { getTokenPricesUsd }   = require("./tokenPrices");
 const { listRecentOnramps }   = require("./db");
-const { getWalletAddress }    = require("./store");
+const { getWalletAddress }    = require("./db");
 
 // ─── In-process conversation history ─────────────────────────────────────────
 // Map<chatId, { messages: array, updatedAt: number }>
@@ -299,7 +299,7 @@ function buildTools(chatId) {
       description: "Get the Solana wallet address the user has registered for USDC delivery",
       parameters: z.object({ _: z.string().optional() }),
       execute: async () => {
-        const address = getWalletAddress(chatId);
+        const address = await getWalletAddress(chatId);
         return address
           ? { wallet_address: address }
           : { wallet_address: null, message: "No wallet set. Use /setwallet <address>." };

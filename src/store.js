@@ -92,67 +92,24 @@ function writeAlerts(alerts) {
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
+// User records are now stored in Supabase (bot_users table via db.js).
+// These stubs are kept so any old imports don't crash — they are no-ops.
 
-function readUsers() {
-  ensureStore();
-  return readJson(USERS_FILE, []);
-}
-
-function writeUsers(users) {
-  ensureStore();
-  writeJson(USERS_FILE, users);
-}
-
-/**
- * Inserts or updates a user record.
- * @param {{ chatId: number|string, username?: string }} user
- */
-function upsertUser({ chatId, username }) {
-  const users = readUsers();
-  const id    = String(chatId);
-  const idx   = users.findIndex((u) => u.chatId === id);
-
-  if (idx === -1) {
-    users.push({ chatId: id, username: username || null, firstSeen: new Date().toISOString() });
-  } else {
-    // Update username if it changed
-    if (username && users[idx].username !== username) {
-      users[idx].username = username;
-    }
-  }
-
-  writeUsers(users);
-}
+/** @deprecated Use db.js upsertUser instead */
+function readUsers()  { return []; }
+/** @deprecated Use db.js upsertUser instead */
+function writeUsers() {}
+/** @deprecated Use db.js upsertUser instead */
+function upsertUser() {}
 
 // ─── Wallet addresses ─────────────────────────────────────────────────────────
+// Wallet addresses are now stored in Supabase (bot_users.wallet_address via db.js).
+// These stubs kept for safety — index.js now imports from db.js directly.
 
-/**
- * Returns the stored Solana wallet address for a user, or null.
- * @param {number|string} chatId
- * @returns {string|null}
- */
-function getWalletAddress(chatId) {
-  const users = readUsers();
-  const user  = users.find((u) => u.chatId === String(chatId));
-  return user?.walletAddress ?? null;
-}
-
-/**
- * Persists a Solana wallet address for a user.
- * @param {number|string} chatId
- * @param {string} address
- */
-function setWalletAddress(chatId, address) {
-  const users = readUsers();
-  const id    = String(chatId);
-  const idx   = users.findIndex((u) => u.chatId === id);
-  if (idx === -1) {
-    users.push({ chatId: id, username: null, firstSeen: new Date().toISOString(), walletAddress: address });
-  } else {
-    users[idx].walletAddress = address;
-  }
-  writeUsers(users);
-}
+/** @deprecated Use db.js getWalletAddress instead */
+function getWalletAddress() { return null; }
+/** @deprecated Use db.js setWalletAddress instead */
+function setWalletAddress() {}
 
 module.exports = {
   readAlerts, writeAlerts,
